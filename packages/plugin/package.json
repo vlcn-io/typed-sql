@@ -1,8 +1,9 @@
 {
-  "name": "typed-sql",
+  "name": "@vlcn.io/eslint-plugin-typed-sql",
   "version": "1.0.0",
   "description": "",
   "main": "lib/index.js",
+  "type": "commonjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc"
