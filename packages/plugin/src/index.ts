@@ -109,8 +109,8 @@ function genRecordShapeCode(query: string): string {
     query = query.replace(/\`/g, '');
     const recordTypes = get_record_shapes(query) as RecordShapes;
     return `<{
-  ${recordTypes.map(r => {
-        return `${r[0]}: {
+${recordTypes.map(r => {
+        return `  ${r[0]}: {
 ${genPropsCode(r[1])}
   }`;
       }).join(",\n")}
@@ -124,8 +124,24 @@ ${genPropsCode(r[1])}
 function genPropsCode(props: [PropName, PropType][]) {
   // TODO: nullability!
   return props.map(p => {
-    return `    ${p[0]}: ${p[1] == null ? 'any' : p[1]}`;
+    return `    ${p[0]}: ${propTypeToTsType(p[1])}`;
   }).join(",\n");
+}
+
+function propTypeToTsType(t: PropType) {
+  if (t == null) {
+    return 'any';
+  }
+  switch (t?.toUpperCase()) {
+    case "TEXT":
+      return "string";
+    case "INTEGER":
+    case "FLOAT":
+      return "number";
+    case "BOOL":
+    case "BOOLEAN":
+        return "boolean";
+  }
 }
 
 export const rules = { codegen };

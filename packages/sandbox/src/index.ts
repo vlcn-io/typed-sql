@@ -56,11 +56,19 @@ function declareSchema<TSchema>(strings: TemplateStringsArray, ...values: any[])
 
 const schema = declareSchema<{
   foo: {
-    a: any
+    a: string,
+    b: number
+  },
+  bar: {
+    id: number,
+    name: string,
+    weight: number
   }
 }>`
-CREATE TABLE foo (a PRIMARY KEY);
+CREATE TABLE foo (a TEXT, b INTEGER);
+CREATE TABLE bar (id INTEGER, name TEXT, weight FLOAT);
 `;
+
 
 type Records = RecordTypes<typeof schema>;
 
