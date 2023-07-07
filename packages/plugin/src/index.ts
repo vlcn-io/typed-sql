@@ -68,15 +68,13 @@ function processSqlTemplate(
   }
 }
 
-function calculateQueryShape(schemaType: ts.Symbol, query: string) {
-  return '<ZOMG>';
-}
-
 function processDeclareSchemaTemplate(
   context: eslint.Rule.RuleContext,
   node: ts.TaggedTemplateExpression,
   checker: ts.TypeChecker
 ) {
+  const children = getChildren(node);
+  const templateStringNode = children[children.length - 1];
   console.log('process declare schema...');
 }
 
@@ -91,3 +89,7 @@ function getChildren(node: ts.Node): ts.Node[] {
 }
 
 const normalise = (val: string) => val.trim().replace(/\s/g, ' ');
+
+function calculateQueryShape(schemaType: ts.Symbol, query: string) {
+  return '<ZOMG>';
+}
