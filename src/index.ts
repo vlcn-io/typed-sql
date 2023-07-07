@@ -33,32 +33,56 @@ const codegen: eslint.Rule.RuleModule = {
     //   return !prevCharacter || prevCharacter === '\n';
     // });
 
-    startMatches.forEach((startMatch, startMatchesIndex) => {
-      // const range: eslint.AST.Range = [startIndex + startMatch[0].length + os.EOL.length, endMatch.index!];
-      // const existingContent = sourceCode.slice(...range);
-      // const normalise = (val: string) => val.trim().replace(/\r?\n/g, os.EOL);
-      // if (result._tag === 'Left') {
-      //   context.report({ message: result.left, loc: startMarkerLoc });
-      //   return;
-      // }
-      // const expected = result.right;
-      // try {
-      //   expect(normalise(existingContent)).toBe(normalise(expected));
-      // } catch (e: unknown) {
-      //   const loc = { start: position(range[0]), end: position(range[1]) };
-      //   context.report({
-      //     message: `content doesn't match: ${e}`,
-      //     loc,
-      //     fix: (fixer) => fixer.replaceTextRange(range, normalise(expected) + os.EOL),
-      //   });
-      // }
-    });
+    // startMatches.forEach((startMatch, startMatchesIndex) => {
+    // const range: eslint.AST.Range = [startIndex + startMatch[0].length + os.EOL.length, endMatch.index!];
+    // const existingContent = sourceCode.slice(...range);
+    // const normalise = (val: string) => val.trim().replace(/\r?\n/g, os.EOL);
+    // if (result._tag === 'Left') {
+    //   context.report({ message: result.left, loc: startMarkerLoc });
+    //   return;
+    // }
+    // const expected = result.right;
+    // try {
+    //   expect(normalise(existingContent)).toBe(normalise(expected));
+    // } catch (e: unknown) {
+    //   const loc = { start: position(range[0]), end: position(range[1]) };
+    //   context.report({
+    //     message: `content doesn't match: ${e}`,
+    //     loc,
+    //     fix: (fixer) => fixer.replaceTextRange(range, normalise(expected) + os.EOL),
+    //   });
+    // }
+    // });
 
     // TODO: should we not just put in our node type selectors instead of processing the entire file?
     return {};
   },
 };
 
-function visit(context: eslint.Rule.RuleContext, node: ts.Node, checker: ts.TypeChecker) {}
+function visit(context: eslint.Rule.RuleContext, node: ts.Node, checker: ts.TypeChecker) {
+  if (!ts.isTaggedTemplateExpression(node)) {
+    ts.forEachChild(node, (node) => visit(context, node, checker));
+    return;
+  }
+
+  const tagName = node.tag.getText();
+  if (tagName.endsWith('.sql')) {
+    processSqlTemplate(context, node, checker);
+  } else if (tagName.endsWith('declareSchema')) {
+    processDeclareSchemaTemplate(context, node, checker);
+  }
+}
+
+function processSqlTemplate(
+  context: eslint.Rule.RuleContext,
+  node: ts.TaggedTemplateExpression,
+  checker: ts.TypeChecker
+) {}
+
+function processDeclareSchemaTemplate(
+  context: eslint.Rule.RuleContext,
+  node: ts.TaggedTemplateExpression,
+  checker: ts.TypeChecker
+) {}
 
 export const rules = { codegen };
