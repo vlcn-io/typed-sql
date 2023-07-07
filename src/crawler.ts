@@ -21,17 +21,21 @@ function visit(node: ts.Node, checker: ts.TypeChecker) {
         const schemaProps = checker.getPropertiesOfType(schemaType);
         console.log('Schema access node: ', schemaAccessNode.getText());
         console.log('Schema node: ', schemaNode.getText());
-        const prop = schemaType.getProperty('__internal')!;
+        const prop = schemaType.getProperty('__type')!;
         const internalType = checker.getTypeOfSymbol(prop);
         const internalProps = checker.getPropertiesOfType(internalType);
-        console.log('internal props', internalProps);
+        // console.log('internal props', internalProps);
         // console.log('schema node type: ', );
+        console.log('SAN End: ', schemaAccessNode.getEnd());
         const outputType = children[1];
         // console.log(outputType);
         if (ts.isTypeReferenceNode(outputType)) {
-          console.log('Generic name: ', outputType.typeName.getText());
+          console.log('Generic name: ', outputType.getFullText());
+        } else if (ts.isTypeLiteralNode(outputType)) {
+          console.log('LITERAL!', outputType.getText());
         }
         const templateNode = children[children.length - 1];
+        console.log('Template Start', templateNode.getStart());
         if (ts.isTemplateLiteral(templateNode)) {
           console.log(`Template: ${node.getText()}`);
         }

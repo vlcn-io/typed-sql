@@ -1,8 +1,4 @@
 import type * as eslint from 'eslint';
-import expect from 'expect';
-import { tryCatch } from 'fp-ts/lib/Either';
-import * as os from 'os';
-import * as path from 'path';
 import * as fs from 'fs';
 import { ESLintUtils } from '@typescript-eslint/utils';
 import * as ts from 'typescript';
@@ -13,61 +9,27 @@ const codegen: eslint.Rule.RuleModule = {
   create(context: eslint.Rule.RuleContext) {
     const sourcePath = context.filename;
     if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) {
-      // replace current content with exception information and return.
+      // TODO: replace current content with exception information and return.
       throw Error(`Source path is not a file: ${sourcePath}`);
     }
     // cast to any seems to be required due to @types/eslint not being up to date to 8.44.0
     const { program } = ESLintUtils.getParserServices(context as any);
     const sourceFile = program.getSourceFile(sourcePath)!;
     const checker = program.getTypeChecker();
-    visit(context, sourceFile, checker);
-
-    // const position = (index: number) => {
-    //   const stringUpToPosition = sourceCode.slice(0, index);
-    //   const lines = stringUpToPosition.split(os.EOL);
-    //   return { line: lines.length, column: lines[lines.length - 1].length };
-    // };
-
-    // const startMatches = [...matchAll(sourceCode, markers.start)].filter((startMatch) => {
-    //   const prevCharacter = sourceCode[startMatch.index! - 1];
-    //   return !prevCharacter || prevCharacter === '\n';
-    // });
-
-    // startMatches.forEach((startMatch, startMatchesIndex) => {
-    // const range: eslint.AST.Range = [startIndex + startMatch[0].length + os.EOL.length, endMatch.index!];
-    // const existingContent = sourceCode.slice(...range);
-    // const normalise = (val: string) => val.trim().replace(/\r?\n/g, os.EOL);
-    // if (result._tag === 'Left') {
-    //   context.report({ message: result.left, loc: startMarkerLoc });
-    //   return;
-    // }
-    // const expected = result.right;
-    // try {
-    //   expect(normalise(existingContent)).toBe(normalise(expected));
-    // } catch (e: unknown) {
-    //   const loc = { start: position(range[0]), end: position(range[1]) };
-    //   context.report({
-    //     message: `content doesn't match: ${e}`,
-    //     loc,
-    //     fix: (fixer) => fixer.replaceTextRange(range, normalise(expected) + os.EOL),
-    //   });
-    // }
-    // });
-
-    // TODO: should we not just put in our node type selectors instead of processing the entire file?
+    visit(context, sourceFile, sourceFile, checker);
     return {};
   },
 };
 
-function visit(context: eslint.Rule.RuleContext, node: ts.Node, checker: ts.TypeChecker) {
+function visit(context: eslint.Rule.RuleContext, sourceFile: ts.SourceFile, node: ts.Node, checker: ts.TypeChecker) {
   if (!ts.isTaggedTemplateExpression(node)) {
-    ts.forEachChild(node, (node) => visit(context, node, checker));
+    ts.forEachChild(node, (node) => visit(context, sourceFile, node, checker));
     return;
   }
 
   const tagName = node.tag.getText();
   if (tagName.endsWith('.sql')) {
-    processSqlTemplate(context, node, checker);
+    processSqlTemplate(context, sourceFile, node, checker);
   } else if (tagName.endsWith('declareSchema')) {
     processDeclareSchemaTemplate(context, node, checker);
   }
@@ -75,14 +37,57 @@ function visit(context: eslint.Rule.RuleContext, node: ts.Node, checker: ts.Type
 
 function processSqlTemplate(
   context: eslint.Rule.RuleContext,
+  sourceFile: ts.SourceFile,
   node: ts.TaggedTemplateExpression,
   checker: ts.TypeChecker
-) {}
+) {
+  const children = getChildren(node);
+  const templateStringNode = children[children.length - 1];
+  const schemaAccessNode = children[0];
+  const schemaNode = getChildren(schemaAccessNode)[0];
+  const schemaType = checker.getTypeAtLocation(schemaNode).getProperty('__type')!;
+  // range of text to replace. Inclusive of `<` and `>` if they exist.
+  const range: [number, number] = [schemaAccessNode.getEnd(), templateStringNode.getStart()];
+  const maybeExistingNode = children[1];
+  if (ts.isTemplateLiteral(templateStringNode)) {
+    // process it, extracting type information
+    let existingContent = '';
+    if (maybeExistingNode != templateStringNode) {
+      existingContent = normalise(`<${maybeExistingNode.getText()}>`);
+    }
+    const replacement = calculateQueryShape(schemaType, templateStringNode.getText());
+    if (existingContent == normalise(replacement)) {
+      return;
+    }
+    const pos = sourceFile.getLineAndCharacterOfPosition(range[0]);
+    context.report({
+      message: `content does not match: ${replacement}`,
+      loc: { line: pos.line, column: pos.character },
+      fix: (fixer) => fixer.replaceTextRange(range, replacement),
+    });
+  }
+}
+
+function calculateQueryShape(schemaType: ts.Symbol, query: string) {
+  return '<ZOMG>';
+}
 
 function processDeclareSchemaTemplate(
   context: eslint.Rule.RuleContext,
   node: ts.TaggedTemplateExpression,
   checker: ts.TypeChecker
-) {}
+) {
+  console.log('process declare schema...');
+}
 
 export const rules = { codegen };
+
+function getChildren(node: ts.Node): ts.Node[] {
+  const ret: ts.Node[] = [];
+  node.forEachChild((c) => {
+    ret.push(c);
+  });
+  return ret;
+}
+
+const normalise = (val: string) => val.trim().replace(/\s/g, ' ');
