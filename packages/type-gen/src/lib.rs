@@ -7,11 +7,14 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub fn get_record_shapes(ddl: String) -> Result<JsValue, JsValue> {
-    if let Ok(records) = get_record_shapes_impl(ddl) {
-        Ok(serde_wasm_bindgen::to_value(&records)?)
-    } else {
-        // todo: pass error string back
-        Ok(JsValue::NULL)
+    match get_record_shapes_impl(ddl) {
+        Ok(records) => Ok(serde_wasm_bindgen::to_value(&records)?),
+        Err(err) => match err {
+            Error::Io(_) => Err(JsValue::from_str("io error")),
+            Error::UnrecognizedToken(_) => Err(JsValue::from_str("Unrecognized token")),
+            Error::ParserError(_, _) => Err(JsValue::from_str("Parse error")),
+            _ => Err(JsValue::from_str("unk error")),
+        },
     }
 }
 

@@ -217,7 +217,6 @@ name = "typed-sql-type-gen"
 version = "0.1.0"
 dependencies = [
  "fallible-iterator",
- "js-sys",
  "serde",
  "serde-wasm-bindgen",
  "sqlite3-parser",
