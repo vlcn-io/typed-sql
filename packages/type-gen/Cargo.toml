@@ -7,6 +7,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
+js-sys = "0.3.64"
 sqlite3-parser = "0.9.0"
 wasm-bindgen = "0.2.87"
 
