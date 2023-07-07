@@ -9,8 +9,10 @@ crate-type = ["cdylib"]
 [dependencies]
 fallible-iterator = "0.3.0"
 js-sys = "0.3.64"
+serde = "1.0.167"
 sqlite3-parser = "0.9.0"
-wasm-bindgen = "0.2.87"
+wasm-bindgen = { version = "0.2.87" }
+serde-wasm-bindgen = "0.4"
 
 [profile.release]
 lto = true
