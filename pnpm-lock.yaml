@@ -38,6 +38,9 @@ importers:
       expect:
         specifier: ^29.6.1
         version: 29.6.1
+      typed-sql-type-gen:
+        specifier: workspace:*
+        version: link:../type-gen/pkg
       typescript:
         specifier: ^5.1.6
         version: 5.1.6

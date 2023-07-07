@@ -2,6 +2,7 @@ import type * as eslint from 'eslint';
 import * as fs from 'fs';
 import { ESLintUtils } from '@typescript-eslint/utils';
 import * as ts from 'typescript';
+import { get_record_shapes } from 'typed-sql-type-gen';
 
 const codegen: eslint.Rule.RuleModule = {
   // @ts-expect-error types are wrong?
@@ -31,7 +32,7 @@ function visit(context: eslint.Rule.RuleContext, sourceFile: ts.SourceFile, node
   if (tagName.endsWith('.sql')) {
     processSqlTemplate(context, sourceFile, node, checker);
   } else if (tagName.endsWith('declareSchema')) {
-    processDeclareSchemaTemplate(context, node, checker);
+    processDeclareSchemaTemplate(context, sourceFile, node, checker);
   }
 }
 
@@ -70,12 +71,61 @@ function processSqlTemplate(
 
 function processDeclareSchemaTemplate(
   context: eslint.Rule.RuleContext,
+  sourceFile: ts.SourceFile,
   node: ts.TaggedTemplateExpression,
   checker: ts.TypeChecker
 ) {
   const children = getChildren(node);
   const templateStringNode = children[children.length - 1];
-  console.log('process declare schema...');
+  const maybeExistingNode = children[1];
+  const schemaAccessNode = children[0];
+  const range: [number, number] = [schemaAccessNode.getEnd(), templateStringNode.getStart()];
+  if (ts.isTemplateLiteral(templateStringNode)) {
+    let existingContent = '';
+    if (maybeExistingNode != templateStringNode) {
+      existingContent = normalise(`<${maybeExistingNode.getText()}>`);
+    }
+    const replacement = genRecordShapeCode(templateStringNode.getText());
+    if (existingContent == normalise(replacement)) {
+      return;
+    }
+    const pos = sourceFile.getLineAndCharacterOfPosition(range[0]);
+    context.report({
+      message: `content does not match: ${replacement}`,
+      loc: { line: pos.line, column: pos.character },
+      fix: (fixer) => fixer.replaceTextRange(range, replacement),
+    });
+  }
+  
+}
+
+type RecordName = string;
+type PropName = string;
+type PropType = string | undefined;
+type RecordShapes = [RecordName, [PropName, PropType][]][];
+function genRecordShapeCode(query: string): string {
+  try {
+    // TODO: fix me
+    query = query.replace(/\`/g, '');
+    const recordTypes = get_record_shapes(query) as RecordShapes;
+    return `<{
+  ${recordTypes.map(r => {
+        return `${r[0]}: {
+${genPropsCode(r[1])}
+  }`;
+      }).join(",\n")}
+}>`;
+  } catch (e) {
+    console.log('some error');
+    return `<${e}>` as string;
+  }
+}
+
+function genPropsCode(props: [PropName, PropType][]) {
+  // TODO: nullability!
+  return props.map(p => {
+    return `    ${p[0]}: ${p[1] == null ? 'any' : p[1]}`;
+  }).join(",\n");
 }
 
 export const rules = { codegen };
@@ -91,8 +141,8 @@ function getChildren(node: ts.Node): ts.Node[] {
 const normalise = (val: string) => val.trim().replace(/\s/g, ' ');
 
 function calculateQueryShape(checker: ts.TypeChecker, schemaType: ts.Symbol, query: string) {
-  const type = checker.getTypeOfSymbol(schemaType);
-  const props = type.getProperties();
+  // const type = checker.getTypeOfSymbol(schemaType);
+  // const props = type.getProperties();
   // top level props are records.
   // prop name is record name
   // prop type is record type
