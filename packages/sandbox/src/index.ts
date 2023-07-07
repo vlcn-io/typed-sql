@@ -10,4 +10,4 @@ const schema = {
 
 schema.sql<ZOMG>`Hey!`;
 
-// const x = "sdf";
+// const x = '';

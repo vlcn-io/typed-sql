@@ -7,7 +7,6 @@ const codegen: eslint.Rule.RuleModule = {
   // @ts-expect-error types are wrong?
   meta: { fixable: true },
   create(context: eslint.Rule.RuleContext) {
-    console.log('PLUGIN LOADED!');
     const sourcePath = context.filename;
     if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) {
       // TODO: replace current content with exception information and return.
@@ -30,7 +29,6 @@ function visit(context: eslint.Rule.RuleContext, sourceFile: ts.SourceFile, node
 
   const tagName = node.tag.getText();
   if (tagName.endsWith('.sql')) {
-    console.log('SQL!');
     processSqlTemplate(context, sourceFile, node, checker);
   } else if (tagName.endsWith('declareSchema')) {
     processDeclareSchemaTemplate(context, node, checker);
