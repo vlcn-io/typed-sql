@@ -13,7 +13,7 @@ export type Query<T> = Opaque<string, T>;
 
 type SchemaType<TSchema> = {
   sql<TResult>(strings: TemplateStringsArray, ...values: any[]): Query<TResult>;
-  readonly [Symbols.internal]: TSchema;
+  __internal: TSchema;
 };
 
 // Define Schema can return something with a generated type
@@ -27,7 +27,7 @@ function defineSchema<TSchema>(schema: { content: string }): SchemaType<TSchema>
       });
       return str as Query<T>;
     },
-    [Symbols.internal]: null as any,
+    __internal: null as TSchema,
   };
 }
 
@@ -35,7 +35,7 @@ function execute<T>(q: Query<T>): T {
   return null as any;
 }
 
-const schema = defineSchema({ content: '' });
+const schema = defineSchema<{ a: number; b: number }>({ content: '' });
 const q = schema.sql<[{ x: number }]>`SELECT x FROM foo`;
 const r = execute(q);
 
@@ -64,7 +64,7 @@ type Msg =
       size: number;
     };
 const MsgRef = createSqlTsTypeRef<Msg>();
-const AppSchema = defineSchema({
+const AppSchema = defineSchema<{ x: 'y' }>({
   content: `
   CREATE TABLE log (id TEXT PRIMARY KEY, msg ${MsgRef});
   `,

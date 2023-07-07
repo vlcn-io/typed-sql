@@ -5,24 +5,37 @@ function visit(node: ts.Node, checker: ts.TypeChecker) {
     const tagName = node.tag.getText();
 
     if (tagName.endsWith('.sql')) {
-      const tagType = checker.getTypeAtLocation(node.tag);
-
-      const signature = checker.getResolvedSignature(node);
-      // // const params = signature?.getParameters() || [];
-      // console.log('Type Params: ', tagType.getCallSignatures()[0].typeParameters);
-      // console.log('Type args: ', tagType.aliasTypeArguments);
-      // console.log('Props: ', tagType.getCallSignatures()[0].typeParameters![0].);
-      // for (const param of params) {
-      //   const type = checker.getTypeOfSymbolAtLocation(param, node);
-      //   // outputs -- Ctor<Bar>
-      //   console.log('Param Type: ', checker.typeToString(type));
-      // }
-
+      // const tagType = checker.getTypeAtLocation(node.tag);
       // Just parse `node.getText` to pull the name?
       // Generate type via that name after parsing SQL string
       console.log(`Found an SQL template at ${node.getFullStart()}: ${node.getText()}`);
-      console.log(`Type of tag is: ${checker.typeToString(tagType)}`);
+      // console.log(`Type of tag is: ${checker.typeToString(tagType)}`);
 
+      const children = getChildren(node);
+      if (children.length != 3) {
+        console.log('No generic or too many generics');
+      } else {
+        const schemaAccessNode = children[0];
+        const schemaNode = getChildren(schemaAccessNode)[0];
+        const schemaType = checker.getTypeAtLocation(schemaNode);
+        const schemaProps = checker.getPropertiesOfType(schemaType);
+        console.log('Schema access node: ', schemaAccessNode.getText());
+        console.log('Schema node: ', schemaNode.getText());
+        const prop = schemaType.getProperty('__internal')!;
+        const internalType = checker.getTypeOfSymbol(prop);
+        const internalProps = checker.getPropertiesOfType(internalType);
+        console.log('internal props', internalProps);
+        // console.log('schema node type: ', );
+        const outputType = children[1];
+        // console.log(outputType);
+        if (ts.isTypeReferenceNode(outputType)) {
+          console.log('Generic name: ', outputType.typeName.getText());
+        }
+        const templateNode = children[children.length - 1];
+        if (ts.isTemplateLiteral(templateNode)) {
+          console.log(`Template: ${node.getText()}`);
+        }
+      }
       // node.chil
       // get children
       // if 2, no generic
@@ -35,6 +48,14 @@ function visit(node: ts.Node, checker: ts.TypeChecker) {
   }
 
   ts.forEachChild(node, (node) => visit(node, checker));
+}
+
+function getChildren(node: ts.Node): ts.Node[] {
+  const ret: ts.Node[] = [];
+  node.forEachChild((c) => {
+    ret.push(c);
+  });
+  return ret;
 }
 
 function analyzeProject(projectDir: string) {
