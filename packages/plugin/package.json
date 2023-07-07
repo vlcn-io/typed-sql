@@ -1,0 +1,23 @@
+{
+  "name": "typed-sql",
+  "version": "1.0.0",
+  "description": "",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@typescript-eslint/utils": "^5.61.0",
+    "expect": "^29.6.1",
+    "typescript": "^5.1.6",
+    "eslint": "^8.44.0"
+  },
+  "devDependencies": {
+    "@types/eslint": "^8.40.2",
+    "@types/node": "^20.4.0"
+  }
+}
