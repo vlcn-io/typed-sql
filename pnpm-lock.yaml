@@ -67,6 +67,14 @@ importers:
         specifier: ^5.1.6
         version: 5.1.6
 
+  packages/sandbox-node:
+    dependencies:
+      typed-sql-type-gen:
+        specifier: workspace:*
+        version: link:../type-gen/pkg
+
+  packages/type-gen/pkg: {}
+
 packages:
 
   /@aashutoshrathi/word-wrap@1.2.6:

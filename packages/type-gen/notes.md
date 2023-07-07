@@ -68,3 +68,14 @@ Harder things:
 - window functions
 - groups bys
 - sub-selects
+
+
+
+---
+wasm-pack build --target nodejs
+
+
+cargo build --target wasm32-unknown-unknown
+wasm strip?
+
+wasm-opt: https://rustwasm.github.io/docs/book/reference/code-size.html#:~:text=Use%20the%20wasm%2Dopt%20Tool,20%25%20savings%20on%20code%20size.

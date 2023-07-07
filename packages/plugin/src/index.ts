@@ -55,7 +55,7 @@ function processSqlTemplate(
     if (maybeExistingNode != templateStringNode) {
       existingContent = normalise(`<${maybeExistingNode.getText()}>`);
     }
-    const replacement = calculateQueryShape(schemaType, templateStringNode.getText());
+    const replacement = calculateQueryShape(checker, schemaType, templateStringNode.getText());
     if (existingContent == normalise(replacement)) {
       return;
     }
@@ -90,6 +90,13 @@ function getChildren(node: ts.Node): ts.Node[] {
 
 const normalise = (val: string) => val.trim().replace(/\s/g, ' ');
 
-function calculateQueryShape(schemaType: ts.Symbol, query: string) {
+function calculateQueryShape(checker: ts.TypeChecker, schemaType: ts.Symbol, query: string) {
+  const type = checker.getTypeOfSymbol(schemaType);
+  const props = type.getProperties();
+  // top level props are records.
+  // prop name is record name
+  // prop type is record type
+  // pack all these into dicts to pass over to type generator
+  // https://rustwasm.github.io/wasm-bindgen/
   return '<ZOMG>';
 }
