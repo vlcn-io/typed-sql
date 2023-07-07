@@ -10,11 +10,36 @@ namespace Symbols {
 }
 
 export type Query<T> = Opaque<string, T>;
+type ExtractResultType<P> = P extends Query<infer T> ? T : never;
 
 type SchemaType<TSchema> = {
   sql<TResult>(strings: TemplateStringsArray, ...values: any[]): Query<TResult>;
-  __internal: TSchema;
+  __content: string;
+  __type: TSchema;
 };
+type RecordTypes<P> = P extends SchemaType<infer T> ? T : never;
+
+function queryType<T>(x: Query<T>): T {
+  return null as any;
+}
+
+function declareSchema<TSchema>(strings: TemplateStringsArray, ...values: any[]): SchemaType<TSchema> {
+  let str = '';
+  strings.forEach((string, i) => {
+    str += string + (values[i] || '');
+  });
+  return {
+    sql<T>(strings: TemplateStringsArray, ...values: any[]): Query<T> {
+      let str = '';
+      strings.forEach((string, i) => {
+        str += string + (values[i] || '');
+      });
+      return str as Query<T>;
+    },
+    __content: str,
+    __type: null as TSchema,
+  };
+}
 
 // Define Schema can return something with a generated type
 // So our file watcher will run on save and generate these schema types.
@@ -27,7 +52,8 @@ function defineSchema<TSchema>(schema: { content: string }): SchemaType<TSchema>
       });
       return str as Query<T>;
     },
-    __internal: null as TSchema,
+    __content: schema.content,
+    __type: null as TSchema,
   };
 }
 
@@ -35,8 +61,10 @@ function execute<T>(q: Query<T>): T {
   return null as any;
 }
 
-const schema = defineSchema<{ a: number; b: number }>({ content: '' });
+const schema = declareSchema<{ User: { id: string; name: string } }>``;
+type Records = RecordTypes<typeof schema>;
 const q = schema.sql<[{ x: number }]>`SELECT x FROM foo`;
+type QResult = ExtractResultType<typeof q>;
 const r = execute(q);
 
 type GeneratedType = [
