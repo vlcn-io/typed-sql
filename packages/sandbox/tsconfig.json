@@ -8,7 +8,8 @@
     "declaration": true,
     "sourceMap": true,
     "skipLibCheck": true,
-    "moduleResolution": "Node"
+    "moduleResolution": "Node",
+    "allowSyntheticDefaultImports": true
   },
   "exclude": ["node_modules", "lib"]
 }
