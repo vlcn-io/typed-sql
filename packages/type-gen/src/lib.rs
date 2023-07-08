@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use fallible_iterator::FallibleIterator;
 use sqlite3_parser::{
     ast::{Cmd, ColumnDefinition, CreateTableBody, Stmt},
@@ -18,11 +20,54 @@ pub fn get_record_shapes(ddl: String) -> Result<JsValue, JsValue> {
     }
 }
 
+pub fn get_query_shapes(query: String, schema: JsValue) -> Result<JsValue, JsValue> {
+    let ddl: Vec<Record> = serde_wasm_bindgen::from_value(schema)?;
+    let recordMap: HashMap<_, _> = ddl.into_iter().collect();
+
+    let ret = get_query_shapes_impl(query, recordMap);
+    Ok(JsValue::from_str("Ok"))
+}
+
 type RecordName = String;
 type PropertyName = String;
 type PropertyType = Option<String>;
 type Property = (PropertyName, PropertyType);
 type Record = (RecordName, Vec<Property>);
+type ComplexRecord = (RecordName, Vec<ComplexProperty>);
+type ComplexProperty = (PropertyName, ComplexPropertyType);
+
+enum ComplexPropertyType {
+    BasicType(String),
+    ComplexType(ComplexRecord),
+}
+
+struct Selected {
+    pub qualifier: Option<String>,
+    pub name: String,
+    pub alias: Option<String>,
+    pub t_type: Option<String>,
+    pub c_num: u32,
+}
+
+fn get_query_shapes_impl(
+    query: String,
+    schema: HashMap<RecordName, Vec<Property>>,
+) -> Result<Record, Error> {
+    /*
+    Parse the query.
+    Build selection set info.
+    [qualifier, name, alias]
+
+    Build Relation aliases against which selection set resolves types by use of qualifier.
+    Sub-select just return relations.
+    Aggregate functions... understand the type produced by the agg. concat vs sum vs ...
+
+    Then resolve selection set types
+    */
+    let mut parser = Parser::new(query.as_bytes());
+
+    Ok(("rec".to_string(), vec![]))
+}
 
 fn get_record_shapes_impl(ddl: String) -> Result<Vec<Record>, Error> {
     let mut parser = Parser::new(ddl.as_bytes());

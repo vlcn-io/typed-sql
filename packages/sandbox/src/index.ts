@@ -60,13 +60,13 @@ const schema = declareSchema<{
     b: number
   },
   bar: {
-    id: number,
+    id: string,
     name: string,
     weight: number
   }
 }>`
 CREATE TABLE foo (a TEXT, b INTEGER);
-CREATE TABLE bar (id INTEGER, name TEXT, weight FLOAT);
+CREATE TABLE bar (id TEXT, name TEXT, weight FLOAT);
 `;
 
 
