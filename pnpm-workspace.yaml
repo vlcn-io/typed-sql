@@ -2,4 +2,4 @@ packages:
   - 'packages/plugin'
   - 'packages/sandbox'
   - 'packages/type-gen/pkg'
-  - 'packages/sandbox-node'
+  - 'packages/runtime'

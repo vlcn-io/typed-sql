@@ -1,8 +1,9 @@
 {
-  "name": "sandbox-node",
+  "name": "@vlcn.io/typed-sql",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "lib/index.js",
+  "module": "lib/index.js",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -12,7 +13,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "typed-sql-type-gen": "workspace:*"
+  "devDependencies": {
+    "typescript": "^5.1.6"
   }
 }

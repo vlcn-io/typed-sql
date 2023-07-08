@@ -52,7 +52,17 @@ importers:
         specifier: ^20.4.0
         version: 20.4.0
 
+  packages/runtime:
+    devDependencies:
+      typescript:
+        specifier: ^5.1.6
+        version: 5.1.6
+
   packages/sandbox:
+    dependencies:
+      '@vlcn.io/typed-sql':
+        specifier: workspace:*
+        version: link:../runtime
     devDependencies:
       '@typescript-eslint/eslint-plugin':
         specifier: ^5.61.0
@@ -69,12 +79,6 @@ importers:
       typescript:
         specifier: ^5.1.6
         version: 5.1.6
-
-  packages/sandbox-node:
-    dependencies:
-      typed-sql-type-gen:
-        specifier: workspace:*
-        version: link:../type-gen/pkg
 
   packages/type-gen/pkg: {}
 
