@@ -2,7 +2,7 @@ import type * as eslint from 'eslint';
 import * as fs from 'fs';
 import { ESLintUtils } from '@typescript-eslint/utils';
 import * as ts from 'typescript';
-import { get_record_shapes } from 'typed-sql-type-gen';
+import { get_relation_shapes } from 'typed-sql-type-gen';
 
 const codegen: eslint.Rule.RuleModule = {
   // @ts-expect-error types are wrong?
@@ -107,7 +107,7 @@ function genRecordShapeCode(query: string): string {
   try {
     // TODO: fix me
     query = query.replace(/\`/g, '');
-    const recordTypes = get_record_shapes(query) as RecordShapes;
+    const recordTypes = get_relation_shapes(query) as RecordShapes;
     return `<{
 ${recordTypes.map(r => {
         return `  ${r[0]}: {
