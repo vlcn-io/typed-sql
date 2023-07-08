@@ -22,18 +22,29 @@ const codegen: eslint.Rule.RuleModule = {
   },
 };
 
-function visit(context: eslint.Rule.RuleContext, sourceFile: ts.SourceFile, node: ts.Node, checker: ts.TypeChecker) {
-  if (!ts.isTaggedTemplateExpression(node)) {
-    ts.forEachChild(node, (node) => visit(context, sourceFile, node, checker));
-    return;
+function visit(
+  context: eslint.Rule.RuleContext,
+  sourceFile: ts.SourceFile,
+  node: ts.Node,
+  checker: ts.TypeChecker
+) {
+  if (ts.isCallExpression(node)) {
+    const name = node.expression.getText()
+    if (name === "createSQL") {
+      processCreateSQL(context, sourceFile, node, checker);
+    }
+  } else if (ts.isTaggedTemplateExpression(node)) {
+    const tagName = node.tag.getText();
+    if (tagName.endsWith('.sql')) {
+      processSqlTemplate(context, sourceFile, node, checker);
+    } else if (tagName.endsWith('declareSchema')) {
+      processDeclareSchemaTemplate(context, sourceFile, node, checker);
+    } else if (tagName === "sql") {
+      processSqlTemplate2(context, sourceFile, node, checker); 
+    }
   }
 
-  const tagName = node.tag.getText();
-  if (tagName.endsWith('.sql')) {
-    processSqlTemplate(context, sourceFile, node, checker);
-  } else if (tagName.endsWith('declareSchema')) {
-    processDeclareSchemaTemplate(context, sourceFile, node, checker);
-  }
+  ts.forEachChild(node, (node) => visit(context, sourceFile, node, checker));
 }
 
 function processSqlTemplate(
@@ -98,6 +109,56 @@ function processDeclareSchemaTemplate(
   }
   
 }
+
+function processCreateSQL(
+  context: eslint.Rule.RuleContext,
+  sourceFile: ts.SourceFile,
+  node: ts.CallExpression,
+  checker: ts.TypeChecker
+) {
+  const argumentNode = node.arguments[1];
+  if (!ts.isStringTextContainingNode(argumentNode)) return;
+  
+  const typeNode = node.typeArguments?.[0];
+  const existing = `<${typeNode?.getText()}>`;
+  const replacement = genRecordShapeCode(argumentNode.text);
+  if (normalise(existing) === normalise(replacement)) return;
+
+  const range: [number, number] = [node.expression.getEnd(), node.arguments[0].getStart() - 1];
+  const pos = sourceFile.getLineAndCharacterOfPosition(range[0]);
+  context.report({
+    message: `content does not match: ${replacement}`,
+    loc: { line: pos.line, column: pos.character },
+    fix: (fixer) => fixer.replaceTextRange(range, replacement),
+  });
+}
+
+function processSqlTemplate2(
+  context: eslint.Rule.RuleContext,
+  sourceFile: ts.SourceFile,
+  node: ts.TaggedTemplateExpression,
+  checker: ts.TypeChecker
+) {
+  const tagType = checker.getTypeAtLocation(node.tag);
+  const signature = checker.getSignaturesOfType(tagType, ts.SignatureKind.Call);
+  const sqlType = checker.getReturnTypeOfSignature(signature[0]);
+  const schemaType = sqlType.getProperties().find(x => x.name.includes("schema"));
+  if (!schemaType) return;
+
+  const typeNode = node.typeArguments?.[0];
+  const existing = `<${typeNode?.getText()}>`;
+  const replacement = calculateQueryShape(checker, schemaType, node.template.getText());
+  if (normalise(existing) === normalise(replacement)) return;
+
+  const range: [number, number] = [node.tag.getEnd(), node.template.getStart()];
+  const pos = sourceFile.getLineAndCharacterOfPosition(range[0]);
+  context.report({
+    message: `content does not match: ${replacement}`,
+    loc: { line: pos.line, column: pos.character },
+    fix: (fixer) => fixer.replaceTextRange(range, replacement),
+  });
+}
+
 
 type RecordName = string;
 type PropName = string;
