@@ -84,13 +84,16 @@ function processSqlTemplate(
     .find((x) => x.name.includes("schema"));
   if (!schemaType) return;
 
+  const siblings = node.parent.getChildren();
+  const nextNode = siblings[siblings.indexOf(node) + 2];
+  const coerced =
+    nextNode && ts.isIdentifier(nextNode) && nextNode.text === "as";
+
   const typeNode = node.typeArguments?.[0];
-  const existing = `<${typeNode?.getText()}>`;
-  const replacement = calculateQueryShape(
-    checker,
-    schemaType,
-    node.template.getText()
-  );
+  const existing = typeNode ? `<${typeNode.getText()}>` : "";
+  const replacement = coerced
+    ? ""
+    : calculateQueryShape(checker, schemaType, node.template.getText());
   if (normalize(existing) === normalize(replacement)) return;
 
   const range: [number, number] = [node.tag.getEnd(), node.template.getStart()];
