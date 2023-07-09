@@ -49,7 +49,7 @@ function processCreateSQL(
   node: ts.CallExpression,
   checker: ts.TypeChecker
 ) {
-  const argumentNode = node.arguments[1];
+  const argumentNode = node.arguments[0];
   if (!ts.isStringTextContainingNode(argumentNode)) return;
 
   const typeNode = node.typeArguments?.[0];
