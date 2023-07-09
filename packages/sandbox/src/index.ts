@@ -32,7 +32,10 @@ await sql<ZOMG>`INSERT INTO foo VALUES ('1', ${1}), ${sql<ZOMG>`('2', ${"2"})`}`
 
 const query = sql<ZOMG>`SELECT * FROM foo`;
 const result = query.then();
-console.log(result);
+const mapped = query.as(() => 123).then();
+console.log(result, mapped);
+
+console.log(await sql`SELECT * FROM foo`.as(JSON.stringify));
 
 type Schema1 = SchemaOf<typeof sql>;
 type Schema2 = SchemaOf<typeof query>;
