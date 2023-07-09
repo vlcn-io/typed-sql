@@ -1,10 +1,10 @@
-import { createSQL, type Schema } from "@vlcn.io/typed-sql";
+import { createSQL, type ResultOf, type SchemaOf } from "@vlcn.io/typed-sql";
 import SQLite, { Database } from "better-sqlite3";
 
 // Cache database connection
 let db: Database | undefined;
 
-const sql = await createSQL<{
+const sql = createSQL<{
   foo: {
     a: string;
     b: number;
@@ -15,23 +15,25 @@ const sql = await createSQL<{
     weight: number;
   };
 }>(
-  async (sql, params) => {
+  `
+  CREATE TABLE IF NOT EXISTS foo (a TEXT, b INTEGER);
+  CREATE TABLE IF NOT EXISTS bar (id TEXT, name TEXT, weight FLOAT);
+  `,
+  (sql, params) => {
     if (!db) db = new SQLite("tables.db");
     const stmt = db.prepare(sql).bind(...params);
     if (stmt.reader) return stmt.all();
     else stmt.run();
     return [];
-  },
-  `
-CREATE TABLE IF NOT EXISTS foo (a TEXT, b INTEGER);
-CREATE TABLE IF NOT EXISTS bar (id TEXT, name TEXT, weight FLOAT);
-`
+  }
 );
 
-type Records = Schema<typeof sql>;
+await sql<ZOMG>`INSERT INTO foo VALUES ('1', ${1}), ${sql<ZOMG>`('2', ${"2"})`}`;
 
-const inner = sql<ZOMG>`('2', ${"2"})`;
-await sql<ZOMG>`INSERT INTO foo VALUES ('1', ${1}), ${inner}`;
-
-const result = await sql<ZOMG>`SELECT * FROM foo`;
+const query = sql<ZOMG>`SELECT * FROM foo`;
+const result = query.then();
 console.log(result);
+
+type Schema1 = SchemaOf<typeof sql>;
+type Schema2 = SchemaOf<typeof query>;
+type Result = ResultOf<typeof query>;
