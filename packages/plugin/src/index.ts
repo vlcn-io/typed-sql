@@ -1,8 +1,8 @@
-import type * as eslint from 'eslint';
-import * as fs from 'fs';
-import { ESLintUtils } from '@typescript-eslint/utils';
-import * as ts from 'typescript';
-import { get_relation_shapes } from 'typed-sql-type-gen';
+import type * as eslint from "eslint";
+import * as fs from "fs";
+import { ESLintUtils } from "@typescript-eslint/utils";
+import * as ts from "typescript";
+import { get_relation_shapes } from "typed-sql-type-gen";
 
 const codegen: eslint.Rule.RuleModule = {
   // @ts-expect-error types are wrong?
@@ -29,85 +29,18 @@ function visit(
   checker: ts.TypeChecker
 ) {
   if (ts.isCallExpression(node)) {
-    const name = node.expression.getText()
+    const name = node.expression.getText();
     if (name === "createSQL") {
       processCreateSQL(context, sourceFile, node, checker);
     }
   } else if (ts.isTaggedTemplateExpression(node)) {
     const tagName = node.tag.getText();
-    if (tagName.endsWith('.sql')) {
+    if (tagName === "sql") {
       processSqlTemplate(context, sourceFile, node, checker);
-    } else if (tagName.endsWith('declareSchema')) {
-      processDeclareSchemaTemplate(context, sourceFile, node, checker);
-    } else if (tagName === "sql") {
-      processSqlTemplate2(context, sourceFile, node, checker); 
     }
   }
 
   ts.forEachChild(node, (node) => visit(context, sourceFile, node, checker));
-}
-
-function processSqlTemplate(
-  context: eslint.Rule.RuleContext,
-  sourceFile: ts.SourceFile,
-  node: ts.TaggedTemplateExpression,
-  checker: ts.TypeChecker
-) {
-  const children = getChildren(node);
-  const templateStringNode = children[children.length - 1];
-  const schemaAccessNode = children[0];
-  const schemaNode = getChildren(schemaAccessNode)[0];
-  const schemaType = checker.getTypeAtLocation(schemaNode).getProperty('__type')!;
-  // range of text to replace. Inclusive of `<` and `>` if they exist.
-  const range: [number, number] = [schemaAccessNode.getEnd(), templateStringNode.getStart()];
-  const maybeExistingNode = children[1];
-  if (ts.isTemplateLiteral(templateStringNode)) {
-    // process it, extracting type information
-    let existingContent = '';
-    if (maybeExistingNode != templateStringNode) {
-      existingContent = normalise(`<${maybeExistingNode.getText()}>`);
-    }
-    const replacement = calculateQueryShape(checker, schemaType, templateStringNode.getText());
-    if (existingContent == normalise(replacement)) {
-      return;
-    }
-    const pos = sourceFile.getLineAndCharacterOfPosition(range[0]);
-    context.report({
-      message: `content does not match: ${replacement}`,
-      loc: { line: pos.line, column: pos.character },
-      fix: (fixer) => fixer.replaceTextRange(range, replacement),
-    });
-  }
-}
-
-function processDeclareSchemaTemplate(
-  context: eslint.Rule.RuleContext,
-  sourceFile: ts.SourceFile,
-  node: ts.TaggedTemplateExpression,
-  checker: ts.TypeChecker
-) {
-  const children = getChildren(node);
-  const templateStringNode = children[children.length - 1];
-  const maybeExistingNode = children[1];
-  const schemaAccessNode = children[0];
-  const range: [number, number] = [schemaAccessNode.getEnd(), templateStringNode.getStart()];
-  if (ts.isTemplateLiteral(templateStringNode)) {
-    let existingContent = '';
-    if (maybeExistingNode != templateStringNode) {
-      existingContent = normalise(`<${maybeExistingNode.getText()}>`);
-    }
-    const replacement = genRecordShapeCode(templateStringNode.getText());
-    if (existingContent == normalise(replacement)) {
-      return;
-    }
-    const pos = sourceFile.getLineAndCharacterOfPosition(range[0]);
-    context.report({
-      message: `content does not match: ${replacement}`,
-      loc: { line: pos.line, column: pos.character },
-      fix: (fixer) => fixer.replaceTextRange(range, replacement),
-    });
-  }
-  
 }
 
 function processCreateSQL(
@@ -118,13 +51,16 @@ function processCreateSQL(
 ) {
   const argumentNode = node.arguments[1];
   if (!ts.isStringTextContainingNode(argumentNode)) return;
-  
+
   const typeNode = node.typeArguments?.[0];
   const existing = `<${typeNode?.getText()}>`;
   const replacement = genRecordShapeCode(argumentNode.text);
-  if (normalise(existing) === normalise(replacement)) return;
+  if (normalize(existing) === normalize(replacement)) return;
 
-  const range: [number, number] = [node.expression.getEnd(), node.arguments[0].getStart() - 1];
+  const range: [number, number] = [
+    node.expression.getEnd(),
+    node.arguments[0].getStart() - 1,
+  ];
   const pos = sourceFile.getLineAndCharacterOfPosition(range[0]);
   context.report({
     message: `content does not match: ${replacement}`,
@@ -133,7 +69,7 @@ function processCreateSQL(
   });
 }
 
-function processSqlTemplate2(
+function processSqlTemplate(
   context: eslint.Rule.RuleContext,
   sourceFile: ts.SourceFile,
   node: ts.TaggedTemplateExpression,
@@ -142,13 +78,19 @@ function processSqlTemplate2(
   const tagType = checker.getTypeAtLocation(node.tag);
   const signature = checker.getSignaturesOfType(tagType, ts.SignatureKind.Call);
   const sqlType = checker.getReturnTypeOfSignature(signature[0]);
-  const schemaType = sqlType.getProperties().find(x => x.name.includes("schema"));
+  const schemaType = sqlType
+    .getProperties()
+    .find((x) => x.name.includes("schema"));
   if (!schemaType) return;
 
   const typeNode = node.typeArguments?.[0];
   const existing = `<${typeNode?.getText()}>`;
-  const replacement = calculateQueryShape(checker, schemaType, node.template.getText());
-  if (normalise(existing) === normalise(replacement)) return;
+  const replacement = calculateQueryShape(
+    checker,
+    schemaType,
+    node.template.getText()
+  );
+  if (normalize(existing) === normalize(replacement)) return;
 
   const range: [number, number] = [node.tag.getEnd(), node.template.getStart()];
   const pos = sourceFile.getLineAndCharacterOfPosition(range[0]);
@@ -159,7 +101,6 @@ function processSqlTemplate2(
   });
 }
 
-
 type RecordName = string;
 type PropName = string;
 type PropType = string | undefined;
@@ -167,31 +108,35 @@ type RecordShapes = [RecordName, [PropName, PropType][]][];
 function genRecordShapeCode(query: string): string {
   try {
     // TODO: fix me
-    query = query.replace(/\`/g, '');
+    query = query.replace(/\`/g, "");
     const recordTypes = get_relation_shapes(query) as RecordShapes;
     return `<{
-${recordTypes.map(r => {
-        return `  ${r[0]}: {
+${recordTypes
+  .map((r) => {
+    return `  ${r[0]}: {
 ${genPropsCode(r[1])}
   }`;
-      }).join(",\n")}
+  })
+  .join(",\n")}
 }>`;
   } catch (e) {
-    console.log('some error');
+    console.log("some error");
     return `<${e}>` as string;
   }
 }
 
 function genPropsCode(props: [PropName, PropType][]) {
   // TODO: nullability!
-  return props.map(p => {
-    return `    ${p[0]}: ${propTypeToTsType(p[1])}`;
-  }).join(",\n");
+  return props
+    .map((p) => {
+      return `    ${p[0]}: ${propTypeToTsType(p[1])}`;
+    })
+    .join(",\n");
 }
 
 function propTypeToTsType(t: PropType) {
   if (t == null) {
-    return 'any';
+    return "any";
   }
   switch (t?.toUpperCase()) {
     case "TEXT":
@@ -201,7 +146,7 @@ function propTypeToTsType(t: PropType) {
       return "number";
     case "BOOL":
     case "BOOLEAN":
-        return "boolean";
+      return "boolean";
   }
 }
 
@@ -215,9 +160,13 @@ function getChildren(node: ts.Node): ts.Node[] {
   return ret;
 }
 
-const normalise = (val: string) => val.trim().replace(/\s/g, ' ');
+const normalize = (val: string) => val.trim().replace(/\s/g, " ");
 
-function calculateQueryShape(checker: ts.TypeChecker, schemaType: ts.Symbol, query: string) {
+function calculateQueryShape(
+  checker: ts.TypeChecker,
+  schemaType: ts.Symbol,
+  query: string
+) {
   // const type = checker.getTypeOfSymbol(schemaType);
   // const props = type.getProperties();
   // top level props are records.
@@ -225,5 +174,5 @@ function calculateQueryShape(checker: ts.TypeChecker, schemaType: ts.Symbol, que
   // prop type is record type
   // pack all these into dicts to pass over to type generator
   // https://rustwasm.github.io/wasm-bindgen/
-  return '<ZOMG>';
+  return "<ZOMG>";
 }
