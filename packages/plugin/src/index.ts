@@ -59,7 +59,7 @@ function processCreateSQL(
 
   const range: [number, number] = [
     node.expression.getEnd(),
-    node.arguments[0].getStart() - 1,
+    node.typeArguments ? node.typeArguments.end + 1 : node.expression.getEnd(),
   ];
   const pos = sourceFile.getLineAndCharacterOfPosition(range[0]);
   context.report({
@@ -160,7 +160,8 @@ function getChildren(node: ts.Node): ts.Node[] {
   return ret;
 }
 
-const normalize = (val: string) => val.trim().replace(/\s/g, " ");
+const normalize = (val: string) =>
+  val.trim().replace(/\s/g, " ").replace(/,|;/g, "");
 
 function calculateQueryShape(
   checker: ts.TypeChecker,
