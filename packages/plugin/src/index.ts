@@ -77,6 +77,7 @@ function processSqlTemplate(
 ) {
   const tagType = checker.getTypeAtLocation(node.tag);
   const signature = checker.getSignaturesOfType(tagType, ts.SignatureKind.Call);
+  if (!signature.length) return;
   const sqlType = checker.getReturnTypeOfSignature(signature[0]);
   const schemaType = sqlType
     .getProperties()
