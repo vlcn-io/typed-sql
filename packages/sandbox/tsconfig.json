@@ -1,15 +1,10 @@
 {
+  "extends": "../../tsconfig-template.json",
   "compilerOptions": {
-    "module": "ESNext",
-    "target": "ESNext",
-    "outDir": "lib",
-    "rootDir": "src",
-    "strict": true,
-    "declaration": true,
-    "sourceMap": true,
-    "skipLibCheck": true,
-    "moduleResolution": "Node",
-    "allowSyntheticDefaultImports": true
+    "outDir": "./lib/",
+    "rootDir": "./src",
+    "allowSyntheticDefaultImports": true,
   },
-  "exclude": ["node_modules", "lib"]
+  "include": ["./src/"],
+  "references": [{ "path": "../runtime" }]
 }

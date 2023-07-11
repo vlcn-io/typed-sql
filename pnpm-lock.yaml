@@ -1,5 +1,9 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 importers:
 
   .:
@@ -83,6 +87,12 @@ importers:
         version: 5.1.6
 
   packages/type-gen/pkg: {}
+
+  tsbuild-all:
+    devDependencies:
+      typescript:
+        specifier: ^5.0.4
+        version: 5.1.6
 
 packages:
 
@@ -2781,7 +2791,3 @@ packages:
   /yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
-
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false
