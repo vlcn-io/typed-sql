@@ -1,38 +1,44 @@
-import type { Coercer, ResultOf, SQL, SchemaOf } from "./types";
+import type { Coercer, ResultOf, SQL, SQLTemplate, SchemaOf } from "./types";
 import { schema } from "./types";
 
-function createSQL<TSchema>(
-  definition: string
-): (strings: TemplateStringsArray, ...values: unknown[]) => SQL<TSchema, never>;
+function createSQL<TSchema>(definition: string): SQLTemplate<TSchema, never>;
 function createSQL<TSchema>(
   definition: string,
   run?: (sql: string, params: any[]) => Promise<unknown[]>
-): <TResult>(
-  strings: TemplateStringsArray,
-  ...values: unknown[]
-) => SQL<TSchema, TResult>;
+): SQLTemplate<TSchema, true>;
 function createSQL<TSchema>(
   definition: string,
   run?: (sql: string, params: any[]) => unknown[]
-): <TResult>(
-  strings: TemplateStringsArray,
-  ...values: unknown[]
-) => SQL<TSchema, TResult, false>;
+): SQLTemplate<TSchema, false>;
 
 function createSQL<TSchema>(
   definition: string,
   run?: (sql: string, params: any[]) => Promise<unknown[]> | unknown[]
 ) {
-  if (run) {
-    definition
-      .split(";") // TODO: handle nested ';' (e.g. for triggers)
-      .filter((x) => x.trim())
-      .map((x) => Promise.resolve(run?.(x, [])));
-  }
+  const queries = definition
+    .split(";") // TODO: handle nested ';' (e.g. for triggers)
+    .filter((x) => x.trim())
+    .map((x) => template([x]));
 
-  return function template(
+  const sql = Object.assign(template, {
+    schema: queries,
+  });
+
+  if (!run) return sql;
+  Object.assign(sql.schema, {
+    then(resolve?: (_: unknown) => unknown, reject?: (_: unknown) => void) {
+      const results = queries.map((x) => (x as any).then());
+      if (!results.length || Array.isArray(results[0])) {
+        return resolve ? resolve(results) : results;
+      }
+      return Promise.all(results).then(resolve, reject);
+    },
+  });
+  return sql;
+
+  function template(
     this: { coercer: Coercer<unknown, unknown> } | void,
-    strings: TemplateStringsArray,
+    strings: readonly string[],
     ...values: unknown[]
   ) {
     const params = values.slice();
@@ -79,7 +85,7 @@ function createSQL<TSchema>(
         return template.bind({ coercer })(strings, ...values) as any;
       },
     });
-  };
+  }
 }
 
 function isSQL(value: unknown): value is SQL<unknown, unknown> {
