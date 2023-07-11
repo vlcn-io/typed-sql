@@ -8,11 +8,13 @@
 //   : [];
 
 export const schema = Symbol();
+export const result = Symbol();
 
 export type SQL<TSchema, TResult, Async = true> = {
   sql: string;
   params: unknown[]; // We cannot infer those with code-gen...
   [schema]: TSchema;
+  [result]: TResult;
 } & ([Async] extends [never]
   ? {}
   : {
@@ -39,13 +41,13 @@ export type Coercer<T, U> =
   | { create: (x: T) => U }
   | { parse: (x: T) => U };
 
-export type SchemaOf<P> = P extends SQL<infer T, any, any>
+export type SchemaOf<P> = P extends { [schema]: infer T }
   ? T
-  : P extends (..._: any[]) => SQL<infer T, any, any>
+  : P extends SQLTemplate<infer T, any>
   ? T
   : never;
 
-export type ResultOf<P> = P extends SQL<any, infer T, any>
+export type ResultOf<P> = P extends { [result]: infer T }
   ? Awaited<T>[]
   : never;
 
