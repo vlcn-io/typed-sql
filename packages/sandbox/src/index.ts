@@ -3,6 +3,7 @@ import SQLite, { Database } from "better-sqlite3";
 
 // Cache database connection
 let db: Database | undefined;
+type ZOMG = any;
 
 const sql = createSQL<{
   foo: {

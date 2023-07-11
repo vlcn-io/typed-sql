@@ -3,3 +3,4 @@ packages:
   - 'packages/sandbox'
   - 'packages/type-gen/pkg'
   - 'packages/runtime'
+  - 'tsbuild-all'
