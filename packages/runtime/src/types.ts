@@ -13,13 +13,26 @@ export type SQL<TSchema, TResult, Async = true> = {
   sql: string;
   params: unknown[]; // We cannot infer those with code-gen...
   [schema]: TSchema;
-} & ([TResult] extends [never]
+} & ([Async] extends [never]
   ? {}
   : {
       as<T>(coercer: Coercer<TResult, T>): SQL<TSchema, T, Async>;
-    } & Async extends true
-  ? PromiseLike<TResult[]>
-  : SyncPromise<TResult[]>);
+    } & (Async extends true ? PromiseLike<TResult[]> : SyncPromise<TResult[]>));
+
+export type SQLTemplate<TSchema, Async = true> = {
+  <TResult>(strings: readonly string[], ...values: unknown[]): SQL<
+    TSchema,
+    TResult,
+    Async
+  >;
+
+  schema: SQL<TSchema, void, Async>[] &
+    ([Async] extends [never]
+      ? {}
+      : Async extends true
+      ? PromiseLike<void[][]>
+      : SyncPromise<void[][]>);
+};
 
 export type Coercer<T, U> =
   | ((x: T) => U)
