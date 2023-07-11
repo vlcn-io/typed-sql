@@ -50,10 +50,14 @@ function createSQL<TSchema>(
       ? this.coercer.parse
       : this.coercer;
 
-    return {
+    const compiled = {
       sql,
       params,
       [schema]: null as TSchema,
+    };
+
+    if (!run) return compiled;
+    return Object.assign(compiled, {
       then(
         resolve?: (_: unknown) => unknown,
         reject?: (_: unknown) => void
@@ -74,7 +78,7 @@ function createSQL<TSchema>(
       as<T>(coercer: Coercer<unknown, T>) {
         return template.bind({ coercer })(strings, ...values) as any;
       },
-    };
+    });
   };
 }
 
