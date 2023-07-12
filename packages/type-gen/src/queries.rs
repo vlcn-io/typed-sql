@@ -41,43 +41,35 @@ fn get_result_shape(
             vec![
                 (
                     String::from("addr"),
-                    Some(builtin_col_type_string(BuiltinColType::Int)),
-                    vec![],
+                    vec![builtin_col_type_string(BuiltinColType::Int)],
                 ),
                 (
                     String::from("opcode"),
-                    Some(builtin_col_type_string(BuiltinColType::String)),
-                    vec![],
+                    vec![builtin_col_type_string(BuiltinColType::String)],
                 ),
                 (
                     String::from("p1"),
-                    Some(builtin_col_type_string(BuiltinColType::Int)),
-                    vec![],
+                    vec![builtin_col_type_string(BuiltinColType::Int)],
                 ),
                 (
                     String::from("p2"),
-                    Some(builtin_col_type_string(BuiltinColType::Int)),
-                    vec![],
+                    vec![builtin_col_type_string(BuiltinColType::Int)],
                 ),
                 (
                     String::from("p3"),
-                    Some(builtin_col_type_string(BuiltinColType::Int)),
-                    vec![],
+                    vec![builtin_col_type_string(BuiltinColType::Int)],
                 ),
                 (
                     String::from("p4"),
-                    Some(builtin_col_type_string(BuiltinColType::Int)),
-                    vec![],
+                    vec![builtin_col_type_string(BuiltinColType::Int)],
                 ),
                 (
                     String::from("p5"),
-                    Some(builtin_col_type_string(BuiltinColType::Int)),
-                    vec![],
+                    vec![builtin_col_type_string(BuiltinColType::Int)],
                 ),
                 (
                     String::from("comment"),
-                    Some(builtin_col_type_string(BuiltinColType::String)),
-                    vec![],
+                    vec![builtin_col_type_string(BuiltinColType::String)],
                 ),
             ],
         ))),
@@ -85,8 +77,7 @@ fn get_result_shape(
             None,
             vec![(
                 String::from("QUERY PLAN"),
-                Some(builtin_col_type_string(BuiltinColType::String)),
-                vec![],
+                vec![builtin_col_type_string(BuiltinColType::String)],
             )],
         ))),
         Cmd::Stmt(Stmt::Select(select)) => {
@@ -247,19 +238,19 @@ fn expression_to_column<F: Fn(usize, &Expr) -> String>(
 ) -> Col {
     let col_name = namer(i, expression);
     let col_type = expression_to_type(expression);
-    (col_name, col_type, vec![])
+    (col_name, col_type)
 }
 
-fn expression_to_type(expression: &Expr) -> Option<String> {
+fn expression_to_type(expression: &Expr) -> Vec<String> {
     match expression {
-        Expr::Binary(_, op, _) => Some(op_to_type(op)),
+        Expr::Binary(_, op, _) => vec![op_to_type(op)],
         Expr::Case {
             when_then_pairs, ..
         } => when_then_to_type(when_then_pairs),
-        Expr::Cast { type_name, .. } => Some(type_name.name),
+        Expr::Cast { type_name, .. } => vec![normalize_type_name(type_name.name)],
         // DoublyQualified would be processed when the col name is returned then married against relations on which it is applied
         // None type returned at this point since we don't have full information
-        Expr::Exists(_) => Some("boolean".to_string()),
+        Expr::Exists(_) => vec![builtin_col_type_string(BuiltinColType::Boolean)],
         Expr::FunctionCall {
             name: Id(n), args, ..
         } => fn_call_to_type(n, args),
@@ -294,20 +285,41 @@ fn op_to_type(op: &Operator) -> String {
     }
 }
 
-fn when_then_to_type(when_then_pairs: &Vec<(Expr, Expr)>) -> Option<String> {
+fn when_then_to_type(when_then_pairs: &Vec<(Expr, Expr)>) -> Vec<String> {
     if let Some(when_then) = when_then_pairs.first() {
         expression_to_type(&when_then.1);
     }
-    None
+    vec![]
 }
 
-fn fn_call_to_type(fn_name: &String, args: &Option<Vec<Expr>>) -> Option<String> {
+// Type needs to be more than a string given nullability is involved.
+// It doesn't need to be option given we have `any`
+fn fn_call_to_type(fn_name: &String, args: &Option<Vec<Expr>>) -> Vec<String> {
     let lowered = fn_name.to_lowercase();
-    if lowered == "abs" || lowered == "changes" || lowered == "" {
-        Some("number".to_string())
-    } else if lowered == "char" || lowered == "format" {
-        Some("text".to_string())
+    if lowered == "abs"
+        || lowered == "changes"
+        || lowered == "instr"
+        || lowered == "last_insert_rowid"
+        || lowered == "length"
+        || lowered == "lower"
+        || lowered == "ltrim"
+    {
+        vec![builtin_col_type_string(BuiltinColType::Number)]
+    } else if lowered == "char" || lowered == "format" || lowered == "glob" || lowered == "hex" {
+        vec![builtin_col_type_string(BuiltinColType::String)]
+    } else if lowered == "coalesce" || lowered == "ifnull" || lowered == "max" {
+        // the type of these is their argument type(s) or null
+        vec![]
+    } else if lowered == "iif" {
+        vec![]
     } else {
-        None
+        vec![]
     }
+}
+
+// This type name could be:
+// 1. A SQLite type
+// 2. Some string the user injected
+fn normalize_type_name(type_name: String) -> String {
+    return type_name;
 }
