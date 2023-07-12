@@ -23,7 +23,7 @@ pub fn get_relation_shapes(schema: String) -> Result<JsValue, JsValue> {
 
 #[wasm_bindgen]
 pub fn get_query_result_shapes(query: String, schema: JsValue) -> Result<JsValue, JsValue> {
-    let ddl: Vec<Relation> = serde_wasm_bindgen::from_value(schema)?;
+    let ddl: Vec<NamedRelation> = serde_wasm_bindgen::from_value(schema)?;
     let record_map: HashMap<_, _> = ddl.into_iter().collect();
 
     let ret = queries::get_result_shapes(query, record_map);
