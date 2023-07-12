@@ -8,7 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 fallible-iterator = "0.3.0"
-serde = "1.0.167"
+serde = { version = "1.0.167", features = ["derive"] }
 sqlite3-parser = "0.9.0"
 wasm-bindgen = { version = "0.2.87" }
 serde-wasm-bindgen = "0.4"

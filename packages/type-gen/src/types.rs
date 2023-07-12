@@ -1,24 +1,40 @@
-pub enum Affinity {
-    INTEGER,
-    TEXT,
-    BLOB,
-    REAL,
-    NUMERIC,
+use serde::{Deserialize, Serialize};
+
+pub enum BuiltinColType {
+    Number,
+    Boolean,
+    String,
+    Blob,
+    Json,
+    Int,
+    Float,
+    Any,
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum Constraint {
+    NotNull,
+    Unique,
+    PrimaryKey,
+    ForeignKey,
 }
 pub type RelationName = String;
 pub type ColName = String;
 pub type ColType = Option<String>;
-pub type Col = (ColName, ColType);
+pub type Col = (ColName, ColType, Vec<Constraint>);
 pub type Relation = (Option<RelationName>, Vec<Col>);
 pub type NamedRelation = (RelationName, Vec<Col>);
 
-pub fn affinity_str(a: Affinity) -> &'static str {
-    match a {
-        Affinity::BLOB => "BLOB",
-        Affinity::INTEGER => "INTEGER",
-        Affinity::NUMERIC => "NUMERIC",
-        Affinity::REAL => "REAL",
-        Affinity::TEXT => "TEXT",
+pub fn builtin_col_type_string(c: BuiltinColType) -> String {
+    match c {
+        BuiltinColType::Blob => "blob".to_string(),
+        BuiltinColType::Boolean => "boolean".to_string(),
+        BuiltinColType::Json => "json".to_string(),
+        BuiltinColType::Number => "number".to_string(),
+        BuiltinColType::String => "string".to_string(),
+        BuiltinColType::Float => "float".to_string(),
+        BuiltinColType::Int => "int".to_string(),
+        BuiltinColType::Any => "any".to_string(),
     }
 }
 
