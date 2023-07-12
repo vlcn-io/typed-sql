@@ -9,6 +9,7 @@ pub enum BuiltinColType {
     Int,
     Float,
     Any,
+    Null,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -20,8 +21,8 @@ pub enum Constraint {
 }
 pub type RelationName = String;
 pub type ColName = String;
-pub type ColType = Option<String>;
-pub type Col = (ColName, ColType, Vec<Constraint>);
+pub type ColType = Vec<String>;
+pub type Col = (ColName, ColType);
 pub type Relation = (Option<RelationName>, Vec<Col>);
 pub type NamedRelation = (RelationName, Vec<Col>);
 
@@ -35,6 +36,7 @@ pub fn builtin_col_type_string(c: BuiltinColType) -> String {
         BuiltinColType::Float => "float".to_string(),
         BuiltinColType::Int => "int".to_string(),
         BuiltinColType::Any => "any".to_string(),
+        BuiltinColType::Null => "null".to_string(),
     }
 }
 
