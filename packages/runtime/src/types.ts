@@ -34,6 +34,15 @@ export type SQLTemplate<TSchema extends Schema, Async = true> = {
       : Async extends true
       ? PromiseLike<void[][]>
       : SyncPromise<void[][]>);
+  table(name: keyof TSchema): SQL<TSchema, unknown, Async>;
+  column<TTable extends keyof TSchema = keyof TSchema>(
+    name: KeysOfUnion<TSchema[TTable]>
+  ): SQL<TSchema, unknown, Async>;
+  values<TTable = unknown>(
+    ...data: TTable extends keyof TSchema
+      ? TSchema[TTable][] | TSchema[TTable][keyof TSchema[TTable]][][]
+      : Record<string, unknown>[] | unknown[][]
+  ): SQL<TSchema, unknown, Async>;
 };
 
 export type Coercer<T, U> =
@@ -59,3 +68,5 @@ type SyncPromise<T> = {
     onrejected?: ((reason: any) => TResult2) | undefined | null
   ): TResult1 | TResult2;
 };
+
+type KeysOfUnion<T> = T extends T ? keyof T : never;

@@ -31,6 +31,9 @@ function createSQL<TSchema extends Schema>(
 
   const sql = Object.assign(template, {
     schema: queries,
+    column: quote,
+    table: quote,
+    values,
   });
 
   if (!run) return sql;
@@ -97,6 +100,30 @@ function createSQL<TSchema extends Schema>(
         return template.bind({ coercer })(strings, ...values) as any;
       },
     });
+  }
+
+  function quote(text: string) {
+    const char = '"';
+    if (!text.includes(char)) return template([char + text + char]);
+    return template([char + text.split(char).join(char + char) + char]);
+  }
+
+  function values(...data: Record<string, unknown>[] | unknown[][]) {
+    if (!data.length) throw new Error("No values were provided!");
+    if (Array.isArray(data[0])) {
+      const row = `(${Array(data[0].length).fill("?").join(",")})`;
+      const snippet = `VALUES ` + Array(data.length).fill(row).join(",");
+      return template(snippet.split("?"), ...data.flat());
+    } else {
+      const keys = Object.keys(data[0]);
+      const columns = keys.map(quote);
+      const row = `(${Array(columns.length).fill("?").join(",")})`;
+      const snippet = row + ` VALUES ` + Array(data.length).fill(row).join(",");
+      return template(
+        snippet.split("?"),
+        ...columns.concat(data.flatMap((x: any) => keys.map((key) => x[key])))
+      );
+    }
   }
 }
 
