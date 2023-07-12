@@ -1,17 +1,26 @@
-import type { Coercer, ResultOf, SQL, SQLTemplate, SchemaOf } from "./types";
+import type {
+  SQLTemplate,
+  ResultOf,
+  SchemaOf,
+  Coercer,
+  Schema,
+  SQL,
+} from "./types";
 import { schema } from "./types";
 
-function createSQL<TSchema>(definition: string): SQLTemplate<TSchema, never>;
-function createSQL<TSchema>(
+function createSQL<TSchema extends Schema>(
+  definition: string
+): SQLTemplate<TSchema, never>;
+function createSQL<TSchema extends Schema>(
   definition: string,
   run?: (sql: string, params: any[]) => Promise<unknown[]>
 ): SQLTemplate<TSchema, true>;
-function createSQL<TSchema>(
+function createSQL<TSchema extends Schema>(
   definition: string,
   run?: (sql: string, params: any[]) => unknown[]
 ): SQLTemplate<TSchema, false>;
 
-function createSQL<TSchema>(
+function createSQL<TSchema extends Schema>(
   definition: string,
   run?: (sql: string, params: any[]) => Promise<unknown[]> | unknown[]
 ) {
@@ -59,7 +68,7 @@ function createSQL<TSchema>(
     const compiled = {
       sql,
       params,
-      [schema]: null as TSchema,
+      [schema]: null as any as TSchema,
     };
 
     if (!run) return compiled;
@@ -88,7 +97,7 @@ function createSQL<TSchema>(
   }
 }
 
-function isSQL(value: unknown): value is SQL<unknown, unknown> {
+function isSQL(value: unknown): value is SQL<{}, unknown> {
   return !!(value && typeof value === "object" && schema in value);
 }
 

@@ -10,7 +10,7 @@
 export const schema = Symbol();
 export const result = Symbol();
 
-export type SQL<TSchema, TResult, Async = true> = {
+export type SQL<TSchema extends Schema, TResult, Async = true> = {
   sql: string;
   params: unknown[]; // We cannot infer those with code-gen...
   [schema]: TSchema;
@@ -21,7 +21,7 @@ export type SQL<TSchema, TResult, Async = true> = {
       as<T>(coercer: Coercer<TResult, T>): SQL<TSchema, T, Async>;
     } & (Async extends true ? PromiseLike<TResult[]> : SyncPromise<TResult[]>));
 
-export type SQLTemplate<TSchema, Async = true> = {
+export type SQLTemplate<TSchema extends Schema, Async = true> = {
   <TResult>(strings: readonly string[], ...values: unknown[]): SQL<
     TSchema,
     TResult,
@@ -50,6 +50,8 @@ export type SchemaOf<P> = P extends { [schema]: infer T }
 export type ResultOf<P> = P extends { [result]: infer T }
   ? Awaited<T>[]
   : never;
+
+export type Schema = Record<string, Record<string, unknown>>;
 
 type SyncPromise<T> = {
   then<TResult1 = T, TResult2 = never>(
