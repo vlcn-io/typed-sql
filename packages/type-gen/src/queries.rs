@@ -2,8 +2,8 @@ use crate::types::*;
 use fallible_iterator::FallibleIterator;
 use sqlite3_parser::{
     ast::{
-        Cmd, Expr, FromClause, JoinOperator, JoinType, OneSelect, ResultColumn, Select,
-        SelectTable, Stmt,
+        Cmd, Expr, FromClause, Id, JoinOperator, JoinType, OneSelect, Operator, ResultColumn,
+        Select, SelectTable, Stmt,
     },
     lexer::sql::{Error, Parser},
 };
@@ -41,35 +41,43 @@ fn get_result_shape(
             vec![
                 (
                     String::from("addr"),
-                    Some(affinity_str(Affinity::INTEGER).to_string()),
+                    Some(builtin_col_type_string(BuiltinColType::Int)),
+                    vec![],
                 ),
                 (
                     String::from("opcode"),
-                    Some(affinity_str(Affinity::TEXT).to_string()),
+                    Some(builtin_col_type_string(BuiltinColType::String)),
+                    vec![],
                 ),
                 (
                     String::from("p1"),
-                    Some(affinity_str(Affinity::INTEGER).to_string()),
+                    Some(builtin_col_type_string(BuiltinColType::Int)),
+                    vec![],
                 ),
                 (
                     String::from("p2"),
-                    Some(affinity_str(Affinity::INTEGER).to_string()),
+                    Some(builtin_col_type_string(BuiltinColType::Int)),
+                    vec![],
                 ),
                 (
                     String::from("p3"),
-                    Some(affinity_str(Affinity::INTEGER).to_string()),
+                    Some(builtin_col_type_string(BuiltinColType::Int)),
+                    vec![],
                 ),
                 (
                     String::from("p4"),
-                    Some(affinity_str(Affinity::INTEGER).to_string()),
+                    Some(builtin_col_type_string(BuiltinColType::Int)),
+                    vec![],
                 ),
                 (
                     String::from("p5"),
-                    Some(affinity_str(Affinity::INTEGER).to_string()),
+                    Some(builtin_col_type_string(BuiltinColType::Int)),
+                    vec![],
                 ),
                 (
                     String::from("comment"),
-                    Some(affinity_str(Affinity::TEXT).to_string()),
+                    Some(builtin_col_type_string(BuiltinColType::String)),
+                    vec![],
                 ),
             ],
         ))),
@@ -77,7 +85,8 @@ fn get_result_shape(
             None,
             vec![(
                 String::from("QUERY PLAN"),
-                Some(affinity_str(Affinity::TEXT).to_string()),
+                Some(builtin_col_type_string(BuiltinColType::String)),
+                vec![],
             )],
         ))),
         Cmd::Stmt(Stmt::Select(select)) => {
@@ -224,5 +233,81 @@ fn expressions_to_columns<F: Fn(usize, &Expr) -> String>(
     expressions: &Vec<Expr>,
     namer: F,
 ) -> Vec<Col> {
-    vec![]
+    expressions
+        .iter()
+        .enumerate()
+        .map(|(i, e)| -> Col { expression_to_column(i, e, &namer) })
+        .collect::<Vec<_>>()
+}
+
+fn expression_to_column<F: Fn(usize, &Expr) -> String>(
+    i: usize,
+    expression: &Expr,
+    namer: &F,
+) -> Col {
+    let col_name = namer(i, expression);
+    let col_type = expression_to_type(expression);
+    (col_name, col_type, vec![])
+}
+
+fn expression_to_type(expression: &Expr) -> Option<String> {
+    match expression {
+        Expr::Binary(_, op, _) => Some(op_to_type(op)),
+        Expr::Case {
+            when_then_pairs, ..
+        } => when_then_to_type(when_then_pairs),
+        Expr::Cast { type_name, .. } => Some(type_name.name),
+        // DoublyQualified would be processed when the col name is returned then married against relations on which it is applied
+        // None type returned at this point since we don't have full information
+        Expr::Exists(_) => Some("boolean".to_string()),
+        Expr::FunctionCall {
+            name: Id(n), args, ..
+        } => fn_call_to_type(n, args),
+    }
+}
+
+// TODO: be more precise on types by considering operands.
+fn op_to_type(op: &Operator) -> String {
+    match op {
+        Operator::Add => builtin_col_type_string(BuiltinColType::Number),
+        Operator::And => builtin_col_type_string(BuiltinColType::Boolean),
+        Operator::ArrowRight => builtin_col_type_string(BuiltinColType::Json),
+        Operator::ArrowRightShift => builtin_col_type_string(BuiltinColType::Any),
+        Operator::BitwiseAnd => builtin_col_type_string(BuiltinColType::Number),
+        Operator::BitwiseOr => builtin_col_type_string(BuiltinColType::Number),
+        Operator::Concat => builtin_col_type_string(BuiltinColType::String),
+        Operator::Equals => builtin_col_type_string(BuiltinColType::Boolean),
+        Operator::Divide => builtin_col_type_string(BuiltinColType::Number),
+        Operator::Greater => builtin_col_type_string(BuiltinColType::Boolean),
+        Operator::GreaterEquals => builtin_col_type_string(BuiltinColType::Boolean),
+        Operator::Is => builtin_col_type_string(BuiltinColType::Boolean),
+        Operator::IsNot => builtin_col_type_string(BuiltinColType::Boolean),
+        Operator::LeftShift => builtin_col_type_string(BuiltinColType::Number),
+        Operator::Less => builtin_col_type_string(BuiltinColType::Boolean),
+        Operator::LessEquals => builtin_col_type_string(BuiltinColType::Boolean),
+        Operator::Modulus => builtin_col_type_string(BuiltinColType::Number),
+        Operator::Multiply => builtin_col_type_string(BuiltinColType::Number),
+        Operator::NotEquals => builtin_col_type_string(BuiltinColType::Boolean),
+        Operator::Or => builtin_col_type_string(BuiltinColType::Boolean),
+        Operator::RightShift => builtin_col_type_string(BuiltinColType::Number),
+        Operator::Substract => builtin_col_type_string(BuiltinColType::Number),
+    }
+}
+
+fn when_then_to_type(when_then_pairs: &Vec<(Expr, Expr)>) -> Option<String> {
+    if let Some(when_then) = when_then_pairs.first() {
+        expression_to_type(&when_then.1);
+    }
+    None
+}
+
+fn fn_call_to_type(fn_name: &String, args: &Option<Vec<Expr>>) -> Option<String> {
+    let lowered = fn_name.to_lowercase();
+    if lowered == "abs" || lowered == "changes" || lowered == "" {
+        Some("number".to_string())
+    } else if lowered == "char" || lowered == "format" {
+        Some("text".to_string())
+    } else {
+        None
+    }
 }

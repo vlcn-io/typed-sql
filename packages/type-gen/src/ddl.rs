@@ -48,5 +48,5 @@ fn get_properties(body: CreateTableBody) -> Vec<Col> {
 
 // Faithfully return types as specified. The layer above us (TS or Java or ...) will map to their native types.
 fn column_as_property(column: ColumnDefinition) -> Col {
-    (column.col_name.0, column.col_type.map(|t| t.name))
+    (column.col_name.0, column.col_type.map(|t| t.name), vec![])
 }
