@@ -296,22 +296,60 @@ fn when_then_to_type(when_then_pairs: &Vec<(Expr, Expr)>) -> Vec<String> {
 // It doesn't need to be option given we have `any`
 fn fn_call_to_type(fn_name: &String, args: &Option<Vec<Expr>>) -> Vec<String> {
     let lowered = fn_name.to_lowercase();
-    if lowered == "abs"
-        || lowered == "changes"
-        || lowered == "instr"
-        || lowered == "last_insert_rowid"
-        || lowered == "length"
+    if lowered == "abs" {
+        vec![builtin_col_type_string(BuiltinColType::Number)]
+    } else if lowered == "char"
+        || lowered == "format"
+        || lowered == "glob"
+        || lowered == "hex"
         || lowered == "lower"
         || lowered == "ltrim"
+        || lowered == "printf"
+        || lowered == "rtrim"
+        || lowered == "soundex"
+        || lowered == "sqlite_compileoption_get"
+        || lowered == "sqlite_source_id"
+        || lowered == "sqlite_version"
+        || lowered == "substr"
+        || lowered == "substring"
+        || lowered == "trim"
+        || lowered == "typeof"
+        || lowered == "upper"
     {
-        vec![builtin_col_type_string(BuiltinColType::Number)]
-    } else if lowered == "char" || lowered == "format" || lowered == "glob" || lowered == "hex" {
         vec![builtin_col_type_string(BuiltinColType::String)]
-    } else if lowered == "coalesce" || lowered == "ifnull" || lowered == "max" {
-        // the type of these is their argument type(s) or null
+    } else if lowered == "coalesce"
+        || lowered == "ifnull"
+        || lowered == "max"
+        || lowered == "min"
+        || lowered == "nullif"
+    {
+        // type is union of arguments and null
         vec![]
     } else if lowered == "iif" {
+        // TODO - type is union of arguments
         vec![]
+    } else if lowered == "quote" {
+        vec![builtin_col_type_string(BuiltinColType::QuotedLiteral)]
+    } else if lowered == "random"
+        || lowered == "last_insert_rowid"
+        || lowered == "sqlite_offset"
+        || lowered == "total_changes"
+    {
+        // TS layer should understand this is number | bigint
+        vec![builtin_col_type_string(BuiltinColType::BigInt)]
+    } else if lowered == "randomblob" || lowered == "unhex" || lowered == "zeroblob" {
+        vec![builtin_col_type_string(BuiltinColType::Blob)]
+    } else if lowered == "insrt"
+        || lowered == "length"
+        || lowered == "changes"
+        || lowered == "sign"
+        || lowered == "unicode"
+    {
+        vec![builtin_col_type_string(BuiltinColType::Int)]
+    } else if lowered == "round" {
+        vec![builtin_col_type_string(BuiltinColType::Float)]
+    } else if lowered == "sqlite_compileoption_used" {
+        vec![builtin_col_type_string(BuiltinColType::Boolean)]
     } else {
         vec![]
     }

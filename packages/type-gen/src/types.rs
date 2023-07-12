@@ -10,6 +10,8 @@ pub enum BuiltinColType {
     Float,
     Any,
     Null,
+    QuotedLiteral,
+    BigInt,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -37,6 +39,8 @@ pub fn builtin_col_type_string(c: BuiltinColType) -> String {
         BuiltinColType::Int => "int".to_string(),
         BuiltinColType::Any => "any".to_string(),
         BuiltinColType::Null => "null".to_string(),
+        BuiltinColType::QuotedLiteral => "quoted_literal".to_string(),
+        BuiltinColType::BigInt => "bigint".to_string(),
     }
 }
 
