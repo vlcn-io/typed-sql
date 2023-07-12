@@ -2,8 +2,8 @@ use crate::types::*;
 use fallible_iterator::FallibleIterator;
 use sqlite3_parser::{
     ast::{
-        Cmd, Expr, FromClause, Id, JoinOperator, JoinType, OneSelect, Operator, ResultColumn,
-        Select, SelectTable, Stmt,
+        Cmd, Expr, FromClause, Id, JoinOperator, JoinType, Literal, OneSelect, Operator,
+        ResultColumn, Select, SelectTable, Stmt, UnaryOperator,
     },
     lexer::sql::{Error, Parser},
 };
@@ -247,7 +247,7 @@ fn expression_to_type(expression: &Expr) -> Vec<String> {
         Expr::Case {
             when_then_pairs, ..
         } => when_then_to_type(when_then_pairs),
-        Expr::Cast { type_name, .. } => vec![normalize_type_name(type_name.name)],
+        Expr::Cast { type_name, .. } => vec![normalize_type_name(type_name.name.to_string())],
         // DoublyQualified would be processed when the col name is returned then married against relations on which it is applied
         // None type returned at this point since we don't have full information
         Expr::Exists(_) => vec![builtin_col_type_string(BuiltinColType::Boolean)],
@@ -261,13 +261,13 @@ fn expression_to_type(expression: &Expr) -> Vec<String> {
         Expr::InTable { .. } => vec![builtin_col_type_string(BuiltinColType::Boolean)],
         Expr::IsNull { .. } => vec![builtin_col_type_string(BuiltinColType::Boolean)],
         Expr::Like { .. } => vec![builtin_col_type_string(BuiltinColType::Boolean)],
-        Expr::Literal(lit) => literal_to_type(lit),
+        Expr::Literal(lit) => vec![literal_to_type(lit)],
         Expr::Name(_) => vec![], // unresolved type. Will get resolved in a later step.
         Expr::NotNull { .. } => vec![builtin_col_type_string(BuiltinColType::Boolean)],
-        Expr::Parenthesized(expr) => subexpression_to_type(expr),
+        Expr::Parenthesized(expr) => vec![subexpression_to_type(expr)],
         Expr::Qualified(_, _) => vec![],
-        Expr::Subquery(select) => subquery_to_type(expr), // a subquery in this position can only return 1 row 1 col
-        Expr::Unary(op, _) => unary_op_to_type(op),
+        Expr::Subquery(select) => vec![subquery_to_type(select)], // a subquery in this position can only return 1 row 1 col
+        Expr::Unary(op, _) => vec![unary_op_to_type(op)],
         _ => vec![],
     }
 }
@@ -297,6 +297,16 @@ fn op_to_type(op: &Operator) -> String {
         Operator::Or => builtin_col_type_string(BuiltinColType::Boolean),
         Operator::RightShift => builtin_col_type_string(BuiltinColType::Number),
         Operator::Substract => builtin_col_type_string(BuiltinColType::Number),
+    }
+}
+
+// TODO: technically we should differentiate against the operand so we can return bigint vs int vs whatever
+fn unary_op_to_type(op: &UnaryOperator) -> String {
+    match op {
+        UnaryOperator::BitwiseNot => builtin_col_type_string(BuiltinColType::Number),
+        UnaryOperator::Negative => builtin_col_type_string(BuiltinColType::Number),
+        UnaryOperator::Not => builtin_col_type_string(BuiltinColType::Boolean),
+        UnaryOperator::Positive => builtin_col_type_string(BuiltinColType::Number),
     }
 }
 
@@ -375,4 +385,19 @@ fn fn_call_to_type(fn_name: &String, args: &Option<Vec<Expr>>) -> Vec<String> {
 // 2. Some string the user injected
 fn normalize_type_name(type_name: String) -> String {
     return type_name;
+}
+
+fn literal_to_type(lit: &Literal) -> String {
+    // match lit {
+    //   Literal::Blob(l) =>
+    // }
+    "any".to_string()
+}
+
+fn subexpression_to_type(expressions: &Vec<Expr>) -> String {
+    "any".to_string()
+}
+
+fn subquery_to_type(query: &Box<Select>) -> String {
+    "any".to_string()
 }
