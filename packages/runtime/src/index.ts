@@ -51,10 +51,13 @@ function createSQL<TSchema extends Schema>(
     ...values: unknown[]
   ) {
     const params = values.slice();
+    let last = 0;
     const sql = strings.reduce((a, b, i) => {
+      last += 1;
       const param = values[i - 1];
       if (!isSQL(param)) return a + "?" + b;
-      params.splice(i - 1, 1, ...param.params);
+      params.splice(last - 1, 1, ...param.params);
+      last += param.params.length - 1;
       return a + param.sql + b;
     });
     const coerce = !this
