@@ -254,6 +254,21 @@ fn expression_to_type(expression: &Expr) -> Vec<String> {
         Expr::FunctionCall {
             name: Id(n), args, ..
         } => fn_call_to_type(n, args),
+        Expr::FunctionCallStar { name: Id(n), .. } => fn_call_to_type(n, &None),
+        Expr::Id(_) => vec![], // unresolved type. Will get resolved in a later step
+        Expr::InList { .. } => vec![builtin_col_type_string(BuiltinColType::Boolean)],
+        Expr::InSelect { .. } => vec![builtin_col_type_string(BuiltinColType::Boolean)],
+        Expr::InTable { .. } => vec![builtin_col_type_string(BuiltinColType::Boolean)],
+        Expr::IsNull { .. } => vec![builtin_col_type_string(BuiltinColType::Boolean)],
+        Expr::Like { .. } => vec![builtin_col_type_string(BuiltinColType::Boolean)],
+        Expr::Literal(lit) => literal_to_type(lit),
+        Expr::Name(_) => vec![], // unresolved type. Will get resolved in a later step.
+        Expr::NotNull { .. } => vec![builtin_col_type_string(BuiltinColType::Boolean)],
+        Expr::Parenthesized(expr) => subexpression_to_type(expr),
+        Expr::Qualified(_, _) => vec![],
+        Expr::Subquery(select) => subquery_to_type(expr), // a subquery in this position can only return 1 row 1 col
+        Expr::Unary(op, _) => unary_op_to_type(op),
+        _ => vec![],
     }
 }
 
