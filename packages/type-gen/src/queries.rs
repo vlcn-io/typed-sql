@@ -33,7 +33,7 @@ impl TokenCollector {
 impl TokenStream for TokenCollector {
     type Error = String;
 
-    fn append(&mut self, ty: TokenType, value: Option<&str>) -> Result<(), Self::Error> {
+    fn append(&mut self, _ty: TokenType, value: Option<&str>) -> Result<(), Self::Error> {
         if let Some(s) = value {
             self.parts.push(s.to_string());
         }
@@ -337,22 +337,6 @@ fn relations_from_from_clause(
     ret
 }
 
-fn handle_full_join(
-    ret: &mut Vec<Relation>,
-    selectable: &SelectTable,
-    outer_from_relations: &Vec<Relation>,
-    schema: &HashMap<RelationName, Vec<Col>>,
-) {
-    if let Some(last_relation) = ret.pop() {
-        ret.push(make_all_cols_nullable(last_relation));
-    }
-    ret.push(make_all_cols_nullable(relation_from_selecttable(
-        selectable,
-        outer_from_relations,
-        schema,
-    )));
-}
-
 fn make_all_cols_nullable(relation: Relation) -> Relation {
     (
         relation.0,
@@ -376,20 +360,49 @@ fn make_type_nullable(mut t: ColType) -> ColType {
     }
 }
 
-fn handle_left_join(
-    relations: &mut Vec<Relation>,
+fn handle_full_join(
+    ret: &mut Vec<Relation>,
     selectable: &SelectTable,
     outer_from_relations: &Vec<Relation>,
     schema: &HashMap<RelationName, Vec<Col>>,
 ) {
+    if let Some(last_relation) = ret.pop() {
+        ret.push(make_all_cols_nullable(last_relation));
+    }
+    ret.push(make_all_cols_nullable(relation_from_selecttable(
+        selectable,
+        outer_from_relations,
+        schema,
+    )));
 }
 
 fn handle_right_join(
-    relations: &mut Vec<Relation>,
+    ret: &mut Vec<Relation>,
     selectable: &SelectTable,
     outer_from_relations: &Vec<Relation>,
     schema: &HashMap<RelationName, Vec<Col>>,
 ) {
+    if let Some(last_relation) = ret.pop() {
+        ret.push(make_all_cols_nullable(last_relation));
+    }
+    ret.push(relation_from_selecttable(
+        selectable,
+        outer_from_relations,
+        schema,
+    ));
+}
+
+fn handle_left_join(
+    ret: &mut Vec<Relation>,
+    selectable: &SelectTable,
+    outer_from_relations: &Vec<Relation>,
+    schema: &HashMap<RelationName, Vec<Col>>,
+) {
+    ret.push(make_all_cols_nullable(relation_from_selecttable(
+        selectable,
+        outer_from_relations,
+        schema,
+    )));
 }
 
 fn relation_from_selecttable(
@@ -476,6 +489,7 @@ fn normalize_qualified_name(name: &QualifiedName) -> String {
 }
 
 fn with_relations(select: &Select) -> HashMap<RelationName, Vec<Col>> {
+    // TODO: impl with_relations
     HashMap::new()
 }
 
