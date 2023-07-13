@@ -98,7 +98,8 @@ fn select_to_relation(
     let selection_set = selection_set(&select);
     // selection set could contain stars
     // if this is the case we pull all columns from all relations in-order and name them.. whatever they were named there.
-    let from_relations = from_relations(&select, outer_from_relations, schema);
+    let mut from_relations = from_relations(&select, outer_from_relations, schema);
+    from_relations.extend(outer_from_relations.clone());
     // TODO: can withs be nested? I don't think so but the current AST allows it.
     let with_relations = with_relations(&select);
 
@@ -737,12 +738,165 @@ mod tests {
     use super::*;
 
     #[test]
-    fn basic_select() {
+    fn select_star_single_table_nullable() {
         let schema_shapes =
             ddl::get_relation_shapes("CREATE TABLE foo (a INTEGER, b TEXT);".to_string()).unwrap();
         let schema: HashMap<_, _> = schema_shapes.into_iter().collect();
 
-        let query_shapes = get_result_shapes("SELECT * FROM foo".to_string(), schema);
-        println!("{:?}", query_shapes);
+        let query_shapes = get_result_shapes("SELECT * FROM foo".to_string(), schema).unwrap();
+        assert_eq!(
+            query_shapes,
+            vec![(
+                None,
+                vec![
+                    (
+                        "a".to_string(),
+                        vec![
+                            (TypeKind::Builtin, Some(BuiltinType::Int), None),
+                            (TypeKind::Builtin, Some(BuiltinType::Null), None)
+                        ]
+                    ),
+                    (
+                        "b".to_string(),
+                        vec![
+                            (TypeKind::Builtin, Some(BuiltinType::String), None),
+                            (TypeKind::Builtin, Some(BuiltinType::Null), None)
+                        ]
+                    )
+                ]
+            )]
+        )
     }
+
+    #[test]
+    fn select_start_single_table_not_null() {
+        let schema_shapes = ddl::get_relation_shapes(
+            "CREATE TABLE foo (a INTEGER NOT NULL, b TEXT NOT NULL);".to_string(),
+        )
+        .unwrap();
+        let schema: HashMap<_, _> = schema_shapes.into_iter().collect();
+
+        let query_shapes = get_result_shapes("SELECT * FROM foo".to_string(), schema).unwrap();
+        assert_eq!(
+            query_shapes,
+            vec![(
+                None,
+                vec![
+                    (
+                        "a".to_string(),
+                        vec![(TypeKind::Builtin, Some(BuiltinType::Int), None),]
+                    ),
+                    (
+                        "b".to_string(),
+                        vec![(TypeKind::Builtin, Some(BuiltinType::String), None),]
+                    )
+                ]
+            )]
+        )
+    }
+
+    #[test]
+    fn select_named_single_table() {
+        let schema_shapes = ddl::get_relation_shapes(
+            "CREATE TABLE foo (a INTEGER NOT NULL, b TEXT NOT NULL);".to_string(),
+        )
+        .unwrap();
+        let schema: HashMap<_, _> = schema_shapes.into_iter().collect();
+
+        let query_shapes = get_result_shapes("SELECT a, b FROM foo".to_string(), schema).unwrap();
+        assert_eq!(
+            query_shapes,
+            vec![(
+                None,
+                vec![
+                    (
+                        "a".to_string(),
+                        vec![(TypeKind::Builtin, Some(BuiltinType::Int), None),]
+                    ),
+                    (
+                        "b".to_string(),
+                        vec![(TypeKind::Builtin, Some(BuiltinType::String), None),]
+                    )
+                ]
+            )]
+        )
+    }
+
+    #[test]
+    fn select_named_reverse_order_single_tabe() {
+        let schema_shapes = ddl::get_relation_shapes(
+            "CREATE TABLE foo (a INTEGER NOT NULL, b TEXT NOT NULL);".to_string(),
+        )
+        .unwrap();
+        let schema: HashMap<_, _> = schema_shapes.into_iter().collect();
+
+        let query_shapes = get_result_shapes("SELECT b, a FROM foo".to_string(), schema).unwrap();
+        assert_eq!(
+            query_shapes,
+            vec![(
+                None,
+                vec![
+                    (
+                        "b".to_string(),
+                        vec![(TypeKind::Builtin, Some(BuiltinType::String), None),]
+                    ),
+                    (
+                        "a".to_string(),
+                        vec![(TypeKind::Builtin, Some(BuiltinType::Int), None),]
+                    ),
+                ]
+            )]
+        )
+    }
+
+    #[test]
+    fn select_star_inner_joins() {
+        let schema_shapes = ddl::get_relation_shapes(
+            "CREATE TABLE foo (a INTEGER NOT NULL, b TEXT NOT NULL);
+            CREATE TABLE bar (c ANY NOT NULL, d ANY NOT NULL);
+            CREATE TABLE baz (e NOT NULL, f NOT NULL);"
+                .to_string(),
+        )
+        .unwrap();
+        let schema: HashMap<_, _> = schema_shapes.into_iter().collect();
+
+        let query_shapes =
+            get_result_shapes("SELECT * FROM foo JOIN bar JOIN baz".to_string(), schema).unwrap();
+        assert_eq!(
+            query_shapes,
+            vec![(
+                None,
+                vec![
+                    (
+                        "a".to_string(),
+                        vec![(TypeKind::Builtin, Some(BuiltinType::Int), None)]
+                    ),
+                    (
+                        "b".to_string(),
+                        vec![(TypeKind::Builtin, Some(BuiltinType::String), None)]
+                    ),
+                    (
+                        "c".to_string(),
+                        vec![(TypeKind::Builtin, Some(BuiltinType::Any), None)]
+                    ),
+                    (
+                        "d".to_string(),
+                        vec![(TypeKind::Builtin, Some(BuiltinType::Any), None)]
+                    ),
+                    (
+                        "e".to_string(),
+                        vec![(TypeKind::Builtin, Some(BuiltinType::Unspecified), None)]
+                    ),
+                    (
+                        "f".to_string(),
+                        vec![(TypeKind::Builtin, Some(BuiltinType::Unspecified), None)]
+                    )
+                ]
+            )]
+        )
+    }
+
+    // test aliases
+    // test join without join (comma join)
+    // it'd probably be easier to test this stuff fomr TypeScript. Much less verbose.
 }

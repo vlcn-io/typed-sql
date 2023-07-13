@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum BuiltinType {
     Number,
     Boolean,
@@ -21,7 +21,7 @@ pub enum BuiltinType {
     CurrentTimestamp,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum TypeKind {
     Literal,
     Builtin,
@@ -29,13 +29,6 @@ pub enum TypeKind {
     Unresolved,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub enum Constraint {
-    NotNull,
-    Unique,
-    PrimaryKey,
-    ForeignKey,
-}
 pub type RelationName = String;
 pub type ColName = String;
 pub type ColType = Vec<(TypeKind, Option<BuiltinType>, Option<String>)>;
@@ -83,6 +76,8 @@ pub fn type_from_type_name(type_name: String) -> ColType {
         builtin_type(BuiltinType::Date)
     } else if lowered == "time" || lowered == "timestamp" {
         builtin_type(BuiltinType::Time)
+    } else if lowered == "any" {
+        builtin_type(BuiltinType::Any)
     } else {
         vec![(TypeKind::Custom, None, Some(type_name))]
     }
