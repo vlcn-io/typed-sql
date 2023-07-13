@@ -1,17 +1,26 @@
-import type { Coercer, ResultOf, SQL, SQLTemplate, SchemaOf } from "./types";
+import type {
+  SQLTemplate,
+  ResultOf,
+  SchemaOf,
+  Coercer,
+  Schema,
+  SQL,
+} from "./types";
 import { schema } from "./types";
 
-function createSQL<TSchema>(definition: string): SQLTemplate<TSchema, never>;
-function createSQL<TSchema>(
+function createSQL<TSchema extends Schema>(
+  definition: string
+): SQLTemplate<TSchema, never>;
+function createSQL<TSchema extends Schema>(
   definition: string,
   run?: (sql: string, params: any[]) => Promise<unknown[]>
 ): SQLTemplate<TSchema, true>;
-function createSQL<TSchema>(
+function createSQL<TSchema extends Schema>(
   definition: string,
   run?: (sql: string, params: any[]) => unknown[]
 ): SQLTemplate<TSchema, false>;
 
-function createSQL<TSchema>(
+function createSQL<TSchema extends Schema>(
   definition: string,
   run?: (sql: string, params: any[]) => Promise<unknown[]> | unknown[]
 ) {
@@ -22,6 +31,9 @@ function createSQL<TSchema>(
 
   const sql = Object.assign(template, {
     schema: queries,
+    column: quote,
+    table: quote,
+    values,
   });
 
   if (!run) return sql;
@@ -42,10 +54,13 @@ function createSQL<TSchema>(
     ...values: unknown[]
   ) {
     const params = values.slice();
+    let last = 0;
     const sql = strings.reduce((a, b, i) => {
+      last += 1;
       const param = values[i - 1];
       if (!isSQL(param)) return a + "?" + b;
-      params.splice(i - 1, 1, ...param.params);
+      params.splice(last - 1, 1, ...param.params);
+      last += param.params.length - 1;
       return a + param.sql + b;
     });
     const coerce = !this
@@ -59,7 +74,7 @@ function createSQL<TSchema>(
     const compiled = {
       sql,
       params,
-      [schema]: null as TSchema,
+      [schema]: null as any as TSchema,
     };
 
     if (!run) return compiled;
@@ -86,9 +101,33 @@ function createSQL<TSchema>(
       },
     });
   }
+
+  function quote(text: string) {
+    const char = '"';
+    if (!text.includes(char)) return template([char + text + char]);
+    return template([char + text.split(char).join(char + char) + char]);
+  }
+
+  function values(...data: Record<string, unknown>[] | unknown[][]) {
+    if (!data.length) throw new Error("No values were provided!");
+    if (Array.isArray(data[0])) {
+      const row = `(${Array(data[0].length).fill("?").join(",")})`;
+      const snippet = `VALUES ` + Array(data.length).fill(row).join(",");
+      return template(snippet.split("?"), ...data.flat());
+    } else {
+      const keys = Object.keys(data[0]);
+      const columns = keys.map(quote);
+      const row = `(${Array(columns.length).fill("?").join(",")})`;
+      const snippet = row + ` VALUES ` + Array(data.length).fill(row).join(",");
+      return template(
+        snippet.split("?"),
+        ...columns.concat(data.flatMap((x: any) => keys.map((key) => x[key])))
+      );
+    }
+  }
 }
 
-function isSQL(value: unknown): value is SQL<unknown, unknown> {
+function isSQL(value: unknown): value is SQL<{}, unknown> {
   return !!(value && typeof value === "object" && schema in value);
 }
 

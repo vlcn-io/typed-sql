@@ -10,7 +10,7 @@
 export const schema = Symbol();
 export const result = Symbol();
 
-export type SQL<TSchema, TResult, Async = true> = {
+export type SQL<TSchema extends Schema, TResult, Async = true> = {
   sql: string;
   params: unknown[]; // We cannot infer those with code-gen...
   [schema]: TSchema;
@@ -21,7 +21,7 @@ export type SQL<TSchema, TResult, Async = true> = {
       as<T>(coercer: Coercer<TResult, T>): SQL<TSchema, T, Async>;
     } & (Async extends true ? PromiseLike<TResult[]> : SyncPromise<TResult[]>));
 
-export type SQLTemplate<TSchema, Async = true> = {
+export type SQLTemplate<TSchema extends Schema, Async = true> = {
   <TResult>(strings: readonly string[], ...values: unknown[]): SQL<
     TSchema,
     TResult,
@@ -34,6 +34,15 @@ export type SQLTemplate<TSchema, Async = true> = {
       : Async extends true
       ? PromiseLike<void[][]>
       : SyncPromise<void[][]>);
+  table(name: keyof TSchema): SQL<TSchema, unknown, Async>;
+  column<TTable extends keyof TSchema = keyof TSchema>(
+    name: KeysOfUnion<TSchema[TTable]>
+  ): SQL<TSchema, unknown, Async>;
+  values<TTable = unknown>(
+    ...data: TTable extends keyof TSchema
+      ? TSchema[TTable][] | TSchema[TTable][keyof TSchema[TTable]][][]
+      : Record<string, unknown>[] | unknown[][]
+  ): SQL<TSchema, unknown, Async>;
 };
 
 export type Coercer<T, U> =
@@ -51,9 +60,13 @@ export type ResultOf<P> = P extends { [result]: infer T }
   ? Awaited<T>[]
   : never;
 
+export type Schema = Record<string, Record<string, unknown>>;
+
 type SyncPromise<T> = {
   then<TResult1 = T, TResult2 = never>(
     onfulfilled?: ((value: T) => TResult1) | undefined | null,
     onrejected?: ((reason: any) => TResult2) | undefined | null
   ): TResult1 | TResult2;
 };
+
+type KeysOfUnion<T> = T extends T ? keyof T : never;

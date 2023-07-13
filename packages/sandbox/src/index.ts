@@ -30,7 +30,7 @@ const sql = createSQL<{
 );
 
 await sql.schema;
-await sql<ZOMG>`INSERT INTO foo VALUES ('1', ${1}), ${sql<ZOMG>`('2', ${"2"})`}`;
+await sql<ZOMG>`INSERT INTO ${sql.table("foo")} ${sql.values(["1", 1])}`;
 
 const query = sql<ZOMG>`SELECT * FROM foo`;
 const result = query.then();
