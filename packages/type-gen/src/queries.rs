@@ -39,45 +39,21 @@ fn get_result_shape(
         Cmd::Explain(_) => Ok(Some((
             None,
             vec![
-                (
-                    String::from("addr"),
-                    vec![builtin_col_type_string(BuiltinColType::Int)],
-                ),
-                (
-                    String::from("opcode"),
-                    vec![builtin_col_type_string(BuiltinColType::String)],
-                ),
-                (
-                    String::from("p1"),
-                    vec![builtin_col_type_string(BuiltinColType::Int)],
-                ),
-                (
-                    String::from("p2"),
-                    vec![builtin_col_type_string(BuiltinColType::Int)],
-                ),
-                (
-                    String::from("p3"),
-                    vec![builtin_col_type_string(BuiltinColType::Int)],
-                ),
-                (
-                    String::from("p4"),
-                    vec![builtin_col_type_string(BuiltinColType::Int)],
-                ),
-                (
-                    String::from("p5"),
-                    vec![builtin_col_type_string(BuiltinColType::Int)],
-                ),
-                (
-                    String::from("comment"),
-                    vec![builtin_col_type_string(BuiltinColType::String)],
-                ),
+                (String::from("addr"), builtin_type(BuiltinType::Int)),
+                (String::from("opcode"), builtin_type(BuiltinType::String)),
+                (String::from("p1"), builtin_type(BuiltinType::Int)),
+                (String::from("p2"), builtin_type(BuiltinType::Int)),
+                (String::from("p3"), builtin_type(BuiltinType::Int)),
+                (String::from("p4"), builtin_type(BuiltinType::Int)),
+                (String::from("p5"), builtin_type(BuiltinType::Int)),
+                (String::from("comment"), builtin_type(BuiltinType::String)),
             ],
         ))),
         Cmd::ExplainQueryPlan(_) => Ok(Some((
             None,
             vec![(
                 String::from("QUERY PLAN"),
-                vec![builtin_col_type_string(BuiltinColType::String)],
+                builtin_type(BuiltinType::String),
             )],
         ))),
         Cmd::Stmt(Stmt::Select(select)) => {
@@ -241,76 +217,76 @@ fn expression_to_column<F: Fn(usize, &Expr) -> String>(
     (col_name, col_type)
 }
 
-fn expression_to_type(expression: &Expr) -> Vec<String> {
+fn expression_to_type(expression: &Expr) -> ColType {
     match expression {
-        Expr::Binary(_, op, _) => vec![op_to_type(op)],
+        Expr::Binary(_, op, _) => op_to_type(op),
         Expr::Case {
             when_then_pairs, ..
         } => when_then_to_type(when_then_pairs),
-        Expr::Cast { type_name, .. } => vec![normalize_type_name(type_name.name.to_string())],
+        Expr::Cast { type_name, .. } => type_from_type_name(type_name.name.to_string()),
         // DoublyQualified would be processed when the col name is returned then married against relations on which it is applied
         // None type returned at this point since we don't have full information
-        Expr::Exists(_) => vec![builtin_col_type_string(BuiltinColType::Boolean)],
+        Expr::Exists(_) => builtin_type(BuiltinType::Boolean),
         Expr::FunctionCall {
             name: Id(n), args, ..
         } => fn_call_to_type(n, args),
         Expr::FunctionCallStar { name: Id(n), .. } => fn_call_to_type(n, &None),
         Expr::Id(_) => vec![], // unresolved type. Will get resolved in a later step
-        Expr::InList { .. } => vec![builtin_col_type_string(BuiltinColType::Boolean)],
-        Expr::InSelect { .. } => vec![builtin_col_type_string(BuiltinColType::Boolean)],
-        Expr::InTable { .. } => vec![builtin_col_type_string(BuiltinColType::Boolean)],
-        Expr::IsNull { .. } => vec![builtin_col_type_string(BuiltinColType::Boolean)],
-        Expr::Like { .. } => vec![builtin_col_type_string(BuiltinColType::Boolean)],
-        Expr::Literal(lit) => vec![literal_to_type(lit)],
+        Expr::InList { .. } => builtin_type(BuiltinType::Boolean),
+        Expr::InSelect { .. } => builtin_type(BuiltinType::Boolean),
+        Expr::InTable { .. } => builtin_type(BuiltinType::Boolean),
+        Expr::IsNull { .. } => builtin_type(BuiltinType::Boolean),
+        Expr::Like { .. } => builtin_type(BuiltinType::Boolean),
+        Expr::Literal(lit) => literal_to_type(lit),
         Expr::Name(_) => vec![], // unresolved type. Will get resolved in a later step.
-        Expr::NotNull { .. } => vec![builtin_col_type_string(BuiltinColType::Boolean)],
-        Expr::Parenthesized(expr) => vec![subexpression_to_type(expr)],
+        Expr::NotNull { .. } => builtin_type(BuiltinType::Boolean),
+        Expr::Parenthesized(expr) => subexpression_to_type(expr),
         Expr::Qualified(_, _) => vec![],
-        Expr::Subquery(select) => vec![subquery_to_type(select)], // a subquery in this position can only return 1 row 1 col
-        Expr::Unary(op, _) => vec![unary_op_to_type(op)],
+        Expr::Subquery(select) => subquery_to_type(select), // a subquery in this position can only return 1 row 1 col
+        Expr::Unary(op, _) => unary_op_to_type(op),
         _ => vec![],
     }
 }
 
 // TODO: be more precise on types by considering operands.
-fn op_to_type(op: &Operator) -> String {
+fn op_to_type(op: &Operator) -> ColType {
     match op {
-        Operator::Add => builtin_col_type_string(BuiltinColType::Number),
-        Operator::And => builtin_col_type_string(BuiltinColType::Boolean),
-        Operator::ArrowRight => builtin_col_type_string(BuiltinColType::Json),
-        Operator::ArrowRightShift => builtin_col_type_string(BuiltinColType::Any),
-        Operator::BitwiseAnd => builtin_col_type_string(BuiltinColType::Number),
-        Operator::BitwiseOr => builtin_col_type_string(BuiltinColType::Number),
-        Operator::Concat => builtin_col_type_string(BuiltinColType::String),
-        Operator::Equals => builtin_col_type_string(BuiltinColType::Boolean),
-        Operator::Divide => builtin_col_type_string(BuiltinColType::Number),
-        Operator::Greater => builtin_col_type_string(BuiltinColType::Boolean),
-        Operator::GreaterEquals => builtin_col_type_string(BuiltinColType::Boolean),
-        Operator::Is => builtin_col_type_string(BuiltinColType::Boolean),
-        Operator::IsNot => builtin_col_type_string(BuiltinColType::Boolean),
-        Operator::LeftShift => builtin_col_type_string(BuiltinColType::Number),
-        Operator::Less => builtin_col_type_string(BuiltinColType::Boolean),
-        Operator::LessEquals => builtin_col_type_string(BuiltinColType::Boolean),
-        Operator::Modulus => builtin_col_type_string(BuiltinColType::Number),
-        Operator::Multiply => builtin_col_type_string(BuiltinColType::Number),
-        Operator::NotEquals => builtin_col_type_string(BuiltinColType::Boolean),
-        Operator::Or => builtin_col_type_string(BuiltinColType::Boolean),
-        Operator::RightShift => builtin_col_type_string(BuiltinColType::Number),
-        Operator::Substract => builtin_col_type_string(BuiltinColType::Number),
+        Operator::Add => builtin_type(BuiltinType::Number),
+        Operator::And => builtin_type(BuiltinType::Boolean),
+        Operator::ArrowRight => builtin_type(BuiltinType::Json),
+        Operator::ArrowRightShift => builtin_type(BuiltinType::Any),
+        Operator::BitwiseAnd => builtin_type(BuiltinType::Number),
+        Operator::BitwiseOr => builtin_type(BuiltinType::Number),
+        Operator::Concat => builtin_type(BuiltinType::String),
+        Operator::Equals => builtin_type(BuiltinType::Boolean),
+        Operator::Divide => builtin_type(BuiltinType::Number),
+        Operator::Greater => builtin_type(BuiltinType::Boolean),
+        Operator::GreaterEquals => builtin_type(BuiltinType::Boolean),
+        Operator::Is => builtin_type(BuiltinType::Boolean),
+        Operator::IsNot => builtin_type(BuiltinType::Boolean),
+        Operator::LeftShift => builtin_type(BuiltinType::Number),
+        Operator::Less => builtin_type(BuiltinType::Boolean),
+        Operator::LessEquals => builtin_type(BuiltinType::Boolean),
+        Operator::Modulus => builtin_type(BuiltinType::Number),
+        Operator::Multiply => builtin_type(BuiltinType::Number),
+        Operator::NotEquals => builtin_type(BuiltinType::Boolean),
+        Operator::Or => builtin_type(BuiltinType::Boolean),
+        Operator::RightShift => builtin_type(BuiltinType::Number),
+        Operator::Substract => builtin_type(BuiltinType::Number),
     }
 }
 
 // TODO: technically we should differentiate against the operand so we can return bigint vs int vs whatever
-fn unary_op_to_type(op: &UnaryOperator) -> String {
+fn unary_op_to_type(op: &UnaryOperator) -> ColType {
     match op {
-        UnaryOperator::BitwiseNot => builtin_col_type_string(BuiltinColType::Number),
-        UnaryOperator::Negative => builtin_col_type_string(BuiltinColType::Number),
-        UnaryOperator::Not => builtin_col_type_string(BuiltinColType::Boolean),
-        UnaryOperator::Positive => builtin_col_type_string(BuiltinColType::Number),
+        UnaryOperator::BitwiseNot => builtin_type(BuiltinType::Number),
+        UnaryOperator::Negative => builtin_type(BuiltinType::Number),
+        UnaryOperator::Not => builtin_type(BuiltinType::Boolean),
+        UnaryOperator::Positive => builtin_type(BuiltinType::Number),
     }
 }
 
-fn when_then_to_type(when_then_pairs: &Vec<(Expr, Expr)>) -> Vec<String> {
+fn when_then_to_type(when_then_pairs: &Vec<(Expr, Expr)>) -> ColType {
     if let Some(when_then) = when_then_pairs.first() {
         expression_to_type(&when_then.1);
     }
@@ -319,10 +295,10 @@ fn when_then_to_type(when_then_pairs: &Vec<(Expr, Expr)>) -> Vec<String> {
 
 // Type needs to be more than a string given nullability is involved.
 // It doesn't need to be option given we have `any`
-fn fn_call_to_type(fn_name: &String, args: &Option<Vec<Expr>>) -> Vec<String> {
+fn fn_call_to_type(fn_name: &String, args: &Option<Vec<Expr>>) -> ColType {
     let lowered = fn_name.to_lowercase();
     if lowered == "abs" {
-        vec![builtin_col_type_string(BuiltinColType::Number)]
+        builtin_type(BuiltinType::Number)
     } else if lowered == "char"
         || lowered == "format"
         || lowered == "glob"
@@ -341,7 +317,7 @@ fn fn_call_to_type(fn_name: &String, args: &Option<Vec<Expr>>) -> Vec<String> {
         || lowered == "typeof"
         || lowered == "upper"
     {
-        vec![builtin_col_type_string(BuiltinColType::String)]
+        builtin_type(BuiltinType::String)
     } else if lowered == "coalesce"
         || lowered == "ifnull"
         || lowered == "max"
@@ -354,50 +330,45 @@ fn fn_call_to_type(fn_name: &String, args: &Option<Vec<Expr>>) -> Vec<String> {
         // TODO - type is union of arguments
         vec![]
     } else if lowered == "quote" {
-        vec![builtin_col_type_string(BuiltinColType::QuotedLiteral)]
+        // TODO: we could take the args to quote and return Quoted<GENERIC>
+        // so ColType should have a palceholder for generics?
+        builtin_type(BuiltinType::Quoted)
     } else if lowered == "random"
         || lowered == "last_insert_rowid"
         || lowered == "sqlite_offset"
         || lowered == "total_changes"
     {
         // TS layer should understand this is number | bigint
-        vec![builtin_col_type_string(BuiltinColType::BigInt)]
+        builtin_type(BuiltinType::BigInt)
     } else if lowered == "randomblob" || lowered == "unhex" || lowered == "zeroblob" {
-        vec![builtin_col_type_string(BuiltinColType::Blob)]
+        builtin_type(BuiltinType::Blob)
     } else if lowered == "insrt"
         || lowered == "length"
         || lowered == "changes"
         || lowered == "sign"
         || lowered == "unicode"
     {
-        vec![builtin_col_type_string(BuiltinColType::Int)]
+        builtin_type(BuiltinType::Int)
     } else if lowered == "round" {
-        vec![builtin_col_type_string(BuiltinColType::Float)]
+        builtin_type(BuiltinType::Float)
     } else if lowered == "sqlite_compileoption_used" {
-        vec![builtin_col_type_string(BuiltinColType::Boolean)]
+        builtin_type(BuiltinType::Boolean)
     } else {
         vec![]
     }
 }
 
-// This type name could be:
-// 1. A SQLite type
-// 2. Some string the user injected
-fn normalize_type_name(type_name: String) -> String {
-    return type_name;
-}
-
-fn literal_to_type(lit: &Literal) -> String {
+fn literal_to_type(lit: &Literal) -> ColType {
     // match lit {
     //   Literal::Blob(l) =>
     // }
-    "any".to_string()
+    vec![]
 }
 
-fn subexpression_to_type(expressions: &Vec<Expr>) -> String {
-    "any".to_string()
+fn subexpression_to_type(expressions: &Vec<Expr>) -> ColType {
+    vec![]
 }
 
-fn subquery_to_type(query: &Box<Select>) -> String {
-    "any".to_string()
+fn subquery_to_type(query: &Box<Select>) -> ColType {
+    vec![]
 }

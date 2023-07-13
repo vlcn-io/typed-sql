@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-pub enum BuiltinColType {
+#[derive(Serialize, Deserialize)]
+pub enum BuiltinType {
     Number,
     Boolean,
     String,
@@ -10,8 +11,17 @@ pub enum BuiltinColType {
     Float,
     Any,
     Null,
-    QuotedLiteral,
+    Quoted,
     BigInt,
+    Unspecified,
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum TypeKind {
+    Literal,
+    Builtin,
+    Custom,
+    Unresolved,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -23,25 +33,37 @@ pub enum Constraint {
 }
 pub type RelationName = String;
 pub type ColName = String;
-pub type ColType = Vec<String>;
+pub type ColType = Vec<(TypeKind, String)>;
 pub type Col = (ColName, ColType);
 pub type Relation = (Option<RelationName>, Vec<Col>);
 pub type NamedRelation = (RelationName, Vec<Col>);
 
-pub fn builtin_col_type_string(c: BuiltinColType) -> String {
+pub fn builtin_type_string(c: BuiltinType) -> String {
     match c {
-        BuiltinColType::Blob => "blob".to_string(),
-        BuiltinColType::Boolean => "boolean".to_string(),
-        BuiltinColType::Json => "json".to_string(),
-        BuiltinColType::Number => "number".to_string(),
-        BuiltinColType::String => "string".to_string(),
-        BuiltinColType::Float => "float".to_string(),
-        BuiltinColType::Int => "int".to_string(),
-        BuiltinColType::Any => "any".to_string(),
-        BuiltinColType::Null => "null".to_string(),
-        BuiltinColType::QuotedLiteral => "quoted_literal".to_string(),
-        BuiltinColType::BigInt => "bigint".to_string(),
+        BuiltinType::Blob => "blob".to_string(),
+        BuiltinType::Boolean => "boolean".to_string(),
+        BuiltinType::Json => "json".to_string(),
+        BuiltinType::Number => "number".to_string(),
+        BuiltinType::String => "string".to_string(),
+        BuiltinType::Float => "float".to_string(),
+        BuiltinType::Int => "int".to_string(),
+        BuiltinType::Any => "any".to_string(),
+        BuiltinType::Null => "null".to_string(),
+        BuiltinType::Quoted => "quoted_literal".to_string(),
+        BuiltinType::BigInt => "bigint".to_string(),
+        BuiltinType::Unspecified => "unspecified".to_string(),
     }
+}
+
+pub fn builtin_type(c: BuiltinType) -> ColType {
+    return vec![(TypeKind::Builtin, builtin_type_string(c))];
+}
+
+// This type name could be:
+// 1. A SQLite type
+// 2. Some string the user injected
+pub fn type_from_type_name(type_name: String) -> ColType {
+    vec![]
 }
 
 // pub type ComplexRecord = (RecordName, Vec<ComplexProperty>);
