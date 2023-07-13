@@ -46,15 +46,17 @@ pub fn get_result_shapes(
     query: String,
     // TODO: we need to qualify relation names with `main`
     schema: HashMap<RelationName, Vec<Col>>,
-) -> Result<Relation, Error> {
+) -> Result<Vec<Relation>, Error> {
     let mut parser = Parser::new(query.as_bytes());
     let mut ret = vec![];
 
     while let Some(cmd) = parser.next()? {
-        ret.push(get_result_shape(cmd, &schema))
+        if let Some(relation) = get_result_shape(cmd, &schema)? {
+            ret.push(relation)
+        }
     }
 
-    Ok((Some("rec".to_string()), vec![]))
+    Ok(ret)
 }
 
 fn get_result_shape(
@@ -488,7 +490,7 @@ fn normalize_qualified_name(name: &QualifiedName) -> String {
     )
 }
 
-fn with_relations(select: &Select) -> HashMap<RelationName, Vec<Col>> {
+fn with_relations(_select: &Select) -> HashMap<RelationName, Vec<Col>> {
     // TODO: impl with_relations
     HashMap::new()
 }
@@ -607,7 +609,7 @@ fn when_then_to_type(
 
 // Type needs to be more than a string given nullability is involved.
 // It doesn't need to be option given we have `any`
-fn fn_call_to_type(fn_name: &String, args: &Option<Vec<Expr>>) -> ColType {
+fn fn_call_to_type(fn_name: &String, _args: &Option<Vec<Expr>>) -> ColType {
     let lowered = fn_name.to_lowercase();
     if lowered == "abs" {
         builtin_type(BuiltinType::Number)
@@ -725,5 +727,22 @@ fn subquery_to_type(
         col.1.to_vec()
     } else {
         vec![]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ddl;
+
+    use super::*;
+
+    #[test]
+    fn basic_select() {
+        let schema_shapes =
+            ddl::get_relation_shapes("CREATE TABLE foo (a INTEGER, b TEXT);".to_string()).unwrap();
+        let schema: HashMap<_, _> = schema_shapes.into_iter().collect();
+
+        let query_shapes = get_result_shapes("SELECT * FROM foo".to_string(), schema);
+        println!("{:?}", query_shapes);
     }
 }
