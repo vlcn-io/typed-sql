@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub enum BuiltinType {
     Number,
     Boolean,
@@ -21,7 +21,7 @@ pub enum BuiltinType {
     CurrentTimestamp,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub enum TypeKind {
     Literal,
     Builtin,
@@ -29,7 +29,7 @@ pub enum TypeKind {
     Unresolved,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub enum Constraint {
     NotNull,
     Unique,
@@ -42,25 +42,6 @@ pub type ColType = Vec<(TypeKind, Option<BuiltinType>, Option<String>)>;
 pub type Col = (ColName, ColType);
 pub type Relation = (Option<RelationName>, Vec<Col>);
 pub type NamedRelation = (RelationName, Vec<Col>);
-
-// pub fn builtin_type_string(c: BuiltinType) -> String {
-//     match c {
-//         BuiltinType::Blob => "blob".to_string(),
-//         BuiltinType::Boolean => "boolean".to_string(),
-//         BuiltinType::Json => "json".to_string(),
-//         BuiltinType::Number => "number".to_string(),
-//         BuiltinType::String => "string".to_string(),
-//         BuiltinType::Float => "float".to_string(),
-//         BuiltinType::Int => "int".to_string(),
-//         BuiltinType::Any => "any".to_string(),
-//         BuiltinType::Null => "null".to_string(),
-//         BuiltinType::Quoted => "quoted_literal".to_string(),
-//         BuiltinType::BigInt => "bigint".to_string(),
-//         BuiltinType::Unspecified => "unspecified".to_string(),
-//         BuiltinType::Date => "date".to_string(),
-//         BuiltinType::Time => "time".to_string(),
-//     }
-// }
 
 pub fn builtin_type(c: BuiltinType) -> ColType {
     return vec![(TypeKind::Builtin, Some(c), None)];
