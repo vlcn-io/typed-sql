@@ -1,6 +1,6 @@
 use fallible_iterator::FallibleIterator;
 use sqlite3_parser::{
-    ast::{Cmd, ColumnDefinition, CreateTableBody, Stmt},
+    ast::{Cmd, ColumnConstraint, ColumnDefinition, CreateTableBody, Stmt},
     lexer::sql::{Error, Parser},
 };
 
@@ -26,7 +26,9 @@ pub fn get_relation_shapes(ddl: String) -> Result<Vec<NamedRelation>, Error> {
 
 fn maybe_record(stmt: Stmt) -> Option<NamedRelation> {
     match stmt {
-        Stmt::CreateTable { tbl_name, body, .. } => Some((tbl_name.name.0, get_properties(body))),
+        Stmt::CreateTable { tbl_name, body, .. } => {
+            Some((format!("main.{}", tbl_name.name.0), get_properties(body)))
+        }
         _ => None,
     }
 }
@@ -48,12 +50,19 @@ fn get_properties(body: CreateTableBody) -> Vec<Col> {
 
 // Faithfully return types as specified. The layer above us (TS or Java or ...) will map to their native types.
 fn column_as_property(column: ColumnDefinition) -> Col {
-    (
-        column.col_name.0,
-        if let Some(col_type) = column.col_type {
-            type_from_type_name(col_type.name)
-        } else {
-            builtin_type(BuiltinType::Unspecified)
-        },
-    )
+    let mut col_type = if let Some(col_type) = column.col_type {
+        type_from_type_name(col_type.name)
+    } else {
+        builtin_type(BuiltinType::Unspecified)
+    };
+    if !column.constraints.iter().any(|c| match c.constraint {
+        ColumnConstraint::NotNull {
+            nullable: false, ..
+        } => true,
+        _ => false,
+    }) {
+        // no not null constraint
+        col_type.extend(builtin_type(BuiltinType::Null))
+    }
+    (column.col_name.0, col_type)
 }
