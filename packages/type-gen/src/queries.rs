@@ -11,13 +11,13 @@ use sqlite3_parser::{
 };
 use std::collections::HashMap;
 
-struct Selected {
-    pub qualifier: Option<String>,
-    pub name: String,
-    pub alias: Option<String>,
-    pub t_type: Option<String>,
-    pub c_num: u32,
-}
+// struct Selected {
+//     pub qualifier: Option<String>,
+//     pub name: String,
+//     pub alias: Option<String>,
+//     pub t_type: Option<String>,
+//     pub c_num: u32,
+// }
 
 struct TokenCollector {
     pub parts: Vec<String>,
@@ -82,19 +82,26 @@ fn get_result_shape(
                 builtin_type(BuiltinType::String),
             )],
         ))),
-        Cmd::Stmt(Stmt::Select(select)) => Ok(Some(select_to_relation(&select, schema))),
+        Cmd::Stmt(Stmt::Select(select)) => Ok(Some(select_to_relation(&select, &vec![], schema))),
         // TODO: update & returning, insert & returning, delete & returning
         Cmd::Stmt(_) => Ok(None),
     }
 }
 
-fn select_to_relation(select: &Select, schema: &HashMap<RelationName, Vec<Col>>) -> Relation {
+fn select_to_relation(
+    select: &Select,
+    outer_from_relations: &Vec<Relation>,
+    schema: &HashMap<RelationName, Vec<Col>>,
+) -> Relation {
     let selection_set = selection_set(&select);
     // selection set could contain stars
     // if this is the case we pull all columns from all relations in-order and name them.. whatever they were named there.
-    let from_relations = from_relations(&select, schema);
+    let from_relations = from_relations(&select, outer_from_relations, schema);
     // TODO: can withs be nested? I don't think so but the current AST allows it.
     let with_relations = with_relations(&select);
+
+    let mut schema = schema.clone();
+    schema.extend(with_relations);
 
     // now craft the result shape by marrying the selection_set with the from_shape.
     // for naked expression selects, determine type of the expression
@@ -111,27 +118,18 @@ fn select_to_relation(select: &Select, schema: &HashMap<RelationName, Vec<Col>>)
             match result_column {
                 ResultColumn::Expr(e, Some(as_)) => vec![(
                     extract_alias(as_).to_string(),
-                    resolve_selection_set_column_type(e, &from_relations, &with_relations, schema),
+                    resolve_selection_set_expr_type(e, &from_relations, &schema),
                 )],
                 ResultColumn::Expr(e, None) => {
                     let mut collector = TokenCollector { parts: vec![] };
                     e.to_tokens(&mut collector).unwrap(); // TokenCollector always returns Ok
                     vec![(
                         collector.to_string(),
-                        resolve_selection_set_column_type(
-                            e,
-                            &from_relations,
-                            &with_relations,
-                            schema,
-                        ),
+                        resolve_selection_set_expr_type(e, &from_relations, &schema),
                     )]
                 }
                 ResultColumn::Star => {
                     // grab everything exposed by `from_relations`
-                    // we don't need to check `with` given a `with` item will show up in `from_relations`
-                    // o wait... it might but as an unresolved thing since we're not passing
-                    // with down.
-                    // we should merge `with` with the `schema` and `with` overrules existing `schema` table names.
                     from_relations
                         .iter()
                         .flat_map(|relation| -> Vec<Col> { relation.1.to_vec() })
@@ -139,7 +137,15 @@ fn select_to_relation(select: &Select, schema: &HashMap<RelationName, Vec<Col>>)
                 }
                 ResultColumn::TableStar(Name(table_name)) => {
                     // grab everything exposed by the chosen table
-                    // the chosen table name could exist in `from_relations` or `schema`
+                    // the chosen table name must exist in from_relations
+                    for relation in &from_relations {
+                        if let Some(name) = &relation.0 {
+                            if table_name == name {
+                                return relation.1.to_vec();
+                            }
+                        }
+                    }
+                    // TODO: err?
                     vec![]
                 }
             }
@@ -149,25 +155,54 @@ fn select_to_relation(select: &Select, schema: &HashMap<RelationName, Vec<Col>>)
     (None, cols)
 }
 
-fn resolve_named_column_type(
-    name: &String,
-    // form relations could be anonymous. E.g., sub-selects without aliases
-    from_relations: &Vec<Relation>,
-    // with and schema items are guaranteed to be named
-    with_relations: &HashMap<RelationName, Vec<Col>>,
-    schema: &HashMap<RelationName, Vec<Col>>,
-) -> ColType {
-    vec![]
-}
-
-fn resolve_selection_set_column_type(
+fn resolve_selection_set_expr_type(
     e: &Expr,
     from_relations: &Vec<Relation>,
-    // with and schema items are guaranteed to be named
-    with_relations: &HashMap<RelationName, Vec<Col>>,
     schema: &HashMap<RelationName, Vec<Col>>,
 ) -> ColType {
-    vec![]
+    match e {
+        Expr::Name(Name(name)) | Expr::Id(Id(name)) => {
+            for relation in from_relations {
+                for col in &relation.1 {
+                    if &col.0 == name {
+                        return col.1.to_vec();
+                    }
+                }
+            }
+            vec![]
+        }
+        Expr::Qualified(Name(table_name), Name(col_name)) => {
+            let prefixed = format!("main.{}", table_name);
+            for relation in from_relations {
+                if let Some(relation_name) = &relation.0 {
+                    if &prefixed == relation_name {
+                        for col in &relation.1 {
+                            if &col.0 == col_name {
+                                return col.1.to_vec();
+                            }
+                        }
+                    }
+                }
+            }
+            vec![]
+        }
+        Expr::DoublyQualified(Name(db_name), Name(table_name), Name(col_name)) => {
+            let prefixed = format!("{}.{}", db_name, table_name);
+            for relation in from_relations {
+                if let Some(relation_name) = &relation.0 {
+                    if &prefixed == relation_name {
+                        for col in &relation.1 {
+                            if &col.0 == col_name {
+                                return col.1.to_vec();
+                            }
+                        }
+                    }
+                }
+            }
+            vec![]
+        }
+        _ => expression_to_type(e, from_relations, schema),
+    }
 }
 
 fn selection_set(select: &Select) -> Vec<ResultColumn> {
@@ -193,19 +228,26 @@ fn selection_set(select: &Select) -> Vec<ResultColumn> {
 
 // a vec of relations since many relations can be joined in.
 // the returned vec of relations might copy relations from the schema but change their col types due to left vs right vs inner join.
-fn from_relations(select: &Select, schema: &HashMap<RelationName, Vec<Col>>) -> Vec<Relation> {
+fn from_relations(
+    select: &Select,
+    outer_from_relations: &Vec<Relation>,
+    schema: &HashMap<RelationName, Vec<Col>>,
+) -> Vec<Relation> {
     match &select.body.select {
         OneSelect::Select {
             from: Some(FromClause { select, joins, .. }),
             ..
-        } => relations_from_from_clause(select, joins, schema),
+        } => relations_from_from_clause(select, joins, outer_from_relations, schema),
         OneSelect::Values(vals) => {
             // vals are all literal expressions...
             // cols are just numbered `columnN...`
             // the relation is unnamed and unaliased
             if let Some(first) = vals.first() {
                 let namer = |i: usize, _e: &Expr| -> String { format!("column{}", i) };
-                vec![(None, expressions_to_columns(first, namer, schema))]
+                vec![(
+                    None,
+                    expressions_to_columns(first, namer, outer_from_relations, schema),
+                )]
             } else {
                 vec![]
             }
@@ -219,12 +261,17 @@ fn from_relations(select: &Select, schema: &HashMap<RelationName, Vec<Col>>) -> 
 fn relations_from_from_clause(
     select: &Option<Box<SelectTable>>,
     joins: &Option<Vec<JoinedSelectTable>>,
+    outer_from_relations: &Vec<Relation>,
     schema: &HashMap<RelationName, Vec<Col>>,
 ) -> Vec<Relation> {
     // join type changes nullability!
     let mut ret = vec![];
     if let Some(selectable) = select {
-        ret.push(relation_from_selecttable(selectable, schema));
+        ret.push(relation_from_selecttable(
+            selectable,
+            outer_from_relations,
+            schema,
+        ));
     }
     if let Some(join_selectables) = joins {
         // for each join --
@@ -232,44 +279,58 @@ fn relations_from_from_clause(
         // if a right join, update relation as pushed.
         for selectable in join_selectables {
             match selectable.operator {
-                JoinOperator::Comma => {
-                    ret.push(relation_from_selecttable(&selectable.table, schema))
-                }
+                JoinOperator::Comma => ret.push(relation_from_selecttable(
+                    &selectable.table,
+                    outer_from_relations,
+                    schema,
+                )),
                 JoinOperator::TypedJoin {
                     join_type: None, ..
-                } => ret.push(relation_from_selecttable(&selectable.table, schema)),
+                } => ret.push(relation_from_selecttable(
+                    &selectable.table,
+                    outer_from_relations,
+                    schema,
+                )),
                 JoinOperator::TypedJoin {
                     join_type: Some(JoinType::Inner),
                     ..
-                } => ret.push(relation_from_selecttable(&selectable.table, schema)),
+                } => ret.push(relation_from_selecttable(
+                    &selectable.table,
+                    outer_from_relations,
+                    schema,
+                )),
                 JoinOperator::TypedJoin {
                     join_type: Some(JoinType::Cross),
                     ..
-                } => ret.push(relation_from_selecttable(&selectable.table, schema)),
+                } => ret.push(relation_from_selecttable(
+                    &selectable.table,
+                    outer_from_relations,
+                    schema,
+                )),
                 JoinOperator::TypedJoin {
                     join_type: Some(JoinType::Left),
                     ..
-                } => handle_left_join(&mut ret, &selectable.table, schema),
+                } => handle_left_join(&mut ret, &selectable.table, outer_from_relations, schema),
                 JoinOperator::TypedJoin {
                     join_type: Some(JoinType::LeftOuter),
                     ..
-                } => handle_left_join(&mut ret, &selectable.table, schema),
+                } => handle_left_join(&mut ret, &selectable.table, outer_from_relations, schema),
                 JoinOperator::TypedJoin {
                     join_type: Some(JoinType::Right),
                     ..
-                } => handle_right_join(&mut ret, &selectable.table, schema),
+                } => handle_right_join(&mut ret, &selectable.table, outer_from_relations, schema),
                 JoinOperator::TypedJoin {
                     join_type: Some(JoinType::RightOuter),
                     ..
-                } => handle_right_join(&mut ret, &selectable.table, schema),
+                } => handle_right_join(&mut ret, &selectable.table, outer_from_relations, schema),
                 JoinOperator::TypedJoin {
                     join_type: Some(JoinType::Full),
                     ..
-                } => handle_full_join(&mut ret, &selectable.table, schema),
+                } => handle_full_join(&mut ret, &selectable.table, outer_from_relations, schema),
                 JoinOperator::TypedJoin {
                     join_type: Some(JoinType::FullOuter),
                     ..
-                } => handle_full_join(&mut ret, &selectable.table, schema),
+                } => handle_full_join(&mut ret, &selectable.table, outer_from_relations, schema),
             }
         }
     }
@@ -277,38 +338,63 @@ fn relations_from_from_clause(
 }
 
 fn handle_full_join(
-    relations: &mut Vec<Relation>,
+    ret: &mut Vec<Relation>,
     selectable: &SelectTable,
+    outer_from_relations: &Vec<Relation>,
     schema: &HashMap<RelationName, Vec<Col>>,
 ) {
-    // let new_relation = make_all_nullable(relation_from_selectable(selectable, schema));
+    if let Some(last_relation) = ret.pop() {
+        ret.push(make_all_cols_nullable(last_relation));
+    }
+    ret.push(make_all_cols_nullable(relation_from_selecttable(
+        selectable,
+        outer_from_relations,
+        schema,
+    )));
 }
 
-// fn make_all_nullable(relation: Relation) -> Relation {
-//   (relation.0, relation.1.iter().map(|col| -> {
-//     (col.0, if let Some(t) = col.1 {
+fn make_all_cols_nullable(relation: Relation) -> Relation {
+    (
+        relation.0,
+        relation
+            .1
+            .iter()
+            .map(|c| (c.0.to_string(), make_type_nullable(c.1.clone())))
+            .collect(),
+    )
+}
 
-//     } else {
-//       col.1
-//     })
-//   }))
-// }
+fn make_type_nullable(mut t: ColType) -> ColType {
+    if t.iter().any(|(_, maybe_builtin, _)| match maybe_builtin {
+        Some(BuiltinType::Null) => true,
+        _ => false,
+    }) {
+        t
+    } else {
+        t.extend(builtin_type(BuiltinType::Null));
+        t
+    }
+}
 
 fn handle_left_join(
     relations: &mut Vec<Relation>,
     selectable: &SelectTable,
+    outer_from_relations: &Vec<Relation>,
     schema: &HashMap<RelationName, Vec<Col>>,
 ) {
 }
+
 fn handle_right_join(
     relations: &mut Vec<Relation>,
     selectable: &SelectTable,
+    outer_from_relations: &Vec<Relation>,
     schema: &HashMap<RelationName, Vec<Col>>,
 ) {
 }
 
 fn relation_from_selecttable(
     selectable: &SelectTable,
+    from_relations: &Vec<Relation>,
     schema: &HashMap<RelationName, Vec<Col>>,
 ) -> Relation {
     match selectable {
@@ -319,7 +405,7 @@ fn relation_from_selecttable(
             maybe_aliased_table_to_relation(qualified_name, maybe_as, schema)
         }
         SelectTable::Select(select, maybe_as) => {
-            let relation = select_to_relation(select, schema);
+            let relation = select_to_relation(select, from_relations, schema);
             if let Some(as_) = maybe_as {
                 (Some(format!("main.{}", extract_alias(as_))), relation.1)
             } else {
@@ -329,7 +415,8 @@ fn relation_from_selecttable(
         SelectTable::Sub(from, maybe_as) => {
             // a sub yields 1 relation which is the selection set against the provided relations of the sub-query
             // idk, sub doesn't really make sense to me here. Select arm should already cover this.
-            let relations = relations_from_from_clause(&from.select, &from.joins, schema);
+            let relations =
+                relations_from_from_clause(&from.select, &from.joins, from_relations, schema);
             // TODO: what if many relations in this position?
             if let Some(first) = relations.first() {
                 if let Some(as_) = maybe_as {
@@ -395,12 +482,13 @@ fn with_relations(select: &Select) -> HashMap<RelationName, Vec<Col>> {
 fn expressions_to_columns<F: Fn(usize, &Expr) -> String>(
     expressions: &Vec<Expr>,
     namer: F,
+    from_relations: &Vec<Relation>,
     schema: &HashMap<RelationName, Vec<Col>>,
 ) -> Vec<Col> {
     expressions
         .iter()
         .enumerate()
-        .map(|(i, e)| -> Col { expression_to_column(i, e, &namer, schema) })
+        .map(|(i, e)| -> Col { expression_to_column(i, e, &namer, from_relations, schema) })
         .collect::<Vec<_>>()
 }
 
@@ -408,19 +496,25 @@ fn expression_to_column<F: Fn(usize, &Expr) -> String>(
     i: usize,
     expression: &Expr,
     namer: &F,
+    from_relations: &Vec<Relation>,
     schema: &HashMap<RelationName, Vec<Col>>,
 ) -> Col {
     let col_name = namer(i, expression);
-    let col_type = expression_to_type(expression, schema);
+    let col_type = expression_to_type(expression, from_relations, schema);
     (col_name, col_type)
 }
 
-fn expression_to_type(expression: &Expr, schema: &HashMap<RelationName, Vec<Col>>) -> ColType {
+// TODO: should this not have access to from_relations if it exists?
+fn expression_to_type(
+    expression: &Expr,
+    from_relations: &Vec<Relation>,
+    schema: &HashMap<RelationName, Vec<Col>>,
+) -> ColType {
     match expression {
         Expr::Binary(_, op, _) => op_to_type(op),
         Expr::Case {
             when_then_pairs, ..
-        } => when_then_to_type(when_then_pairs, schema),
+        } => when_then_to_type(when_then_pairs, from_relations, schema),
         Expr::Cast { type_name, .. } => type_from_type_name(type_name.name.to_string()),
         // DoublyQualified would be processed when the col name is returned then married against relations on which it is applied
         // None type returned at this point since we don't have full information
@@ -438,10 +532,10 @@ fn expression_to_type(expression: &Expr, schema: &HashMap<RelationName, Vec<Col>
         Expr::Literal(lit) => literal_to_type(lit),
         Expr::Name(_) => vec![], // unresolved type. Will get resolved in a later step.
         Expr::NotNull { .. } => builtin_type(BuiltinType::Boolean),
-        Expr::Parenthesized(expr) => subexpression_to_type(expr, schema),
+        Expr::Parenthesized(expr) => subexpression_to_type(expr, from_relations, schema),
         Expr::Qualified(_, _) => vec![],
         Expr::DoublyQualified(_, _, _) => vec![],
-        Expr::Subquery(select) => subquery_to_type(select, schema), // a subquery in this position can only return 1 row 1 col
+        Expr::Subquery(select) => subquery_to_type(select, from_relations, schema), // a subquery in this position can only return 1 row 1 col
         Expr::Unary(op, _) => unary_op_to_type(op),
         _ => vec![],
     }
@@ -487,11 +581,12 @@ fn unary_op_to_type(op: &UnaryOperator) -> ColType {
 
 fn when_then_to_type(
     when_then_pairs: &Vec<(Expr, Expr)>,
+    from_relations: &Vec<Relation>,
     schema: &HashMap<RelationName, Vec<Col>>,
 ) -> ColType {
     // TODO: error on missing when_then_pairs?
     if let Some(when_then) = when_then_pairs.first() {
-        expression_to_type(&when_then.1, schema);
+        expression_to_type(&when_then.1, from_relations, schema);
     }
     vec![]
 }
@@ -591,21 +686,26 @@ fn literal_to_type(lit: &Literal) -> ColType {
 
 fn subexpression_to_type(
     expressions: &Vec<Expr>,
+    from_relations: &Vec<Relation>,
     schema: &HashMap<RelationName, Vec<Col>>,
 ) -> ColType {
     // ok, this is weird that it is an array of expressions to refer to a sub-expression.
     // it seems like there should only ever be one sub-expression if this appears in a position that can emit a result type.
     // TODO: error on many expressions?
     if let Some(e) = expressions.first() {
-        expression_to_type(e, schema)
+        expression_to_type(e, from_relations, schema)
     } else {
         vec![]
     }
 }
 
 // A subquery in a type position can only return a single column so it has a single type.
-fn subquery_to_type(query: &Box<Select>, schema: &HashMap<RelationName, Vec<Col>>) -> ColType {
-    let subquery_relation = select_to_relation(query, schema);
+fn subquery_to_type(
+    query: &Box<Select>,
+    outer_from_relations: &Vec<Relation>,
+    schema: &HashMap<RelationName, Vec<Col>>,
+) -> ColType {
+    let subquery_relation = select_to_relation(query, outer_from_relations, schema);
     // TODO: error on many columns?
     if let Some(col) = subquery_relation.1.first() {
         col.1.to_vec()
