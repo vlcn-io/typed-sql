@@ -899,4 +899,5 @@ mod tests {
     // test aliases
     // test join without join (comma join)
     // it'd probably be easier to test this stuff fomr TypeScript. Much less verbose.
+    // test literals and expressions inside the selection set
 }

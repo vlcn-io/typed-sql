@@ -8,6 +8,7 @@
   "references": [
     { "path": "../packages/plugin" },
     { "path": "../packages/runtime" },
-    { "path": "../packages/sandbox" }
+    { "path": "../packages/sandbox" },
+    { "path": "../packages/type-gen-ts-adapter" }
   ]
 }

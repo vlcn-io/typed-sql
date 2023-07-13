@@ -1,5 +1,9 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 importers:
 
   .:
@@ -84,6 +88,19 @@ importers:
       typescript:
         specifier: ^5.1.6
         version: 5.1.6
+
+  packages/type-gen-ts-tests:
+    dependencies:
+      typed-sql-type-gen:
+        specifier: workspace:*
+        version: link:../type-gen/pkg
+    devDependencies:
+      typescript:
+        specifier: ^5.1.6
+        version: 5.1.6
+      vitest:
+        specifier: ^0.33.0
+        version: 0.33.0
 
   packages/type-gen/pkg: {}
 
@@ -3378,7 +3395,3 @@ packages:
     resolution: {integrity: sha512-9bnSc/HEW2uRy67wc+T8UwauLuPJVn28jb+GtJY16iiKWyvmYJRXVT4UamsAEGQfPohgr2q4Tq0sQbQlxTfi1g==}
     engines: {node: '>=12.20'}
     dev: true
-
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false
