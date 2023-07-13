@@ -51,9 +51,9 @@ fn column_as_property(column: ColumnDefinition) -> Col {
     (
         column.col_name.0,
         if let Some(col_type) = column.col_type {
-            vec![col_type.name]
+            type_from_type_name(col_type.name)
         } else {
-            vec![]
+            builtin_type(BuiltinType::Unspecified)
         },
     )
 }
