@@ -359,10 +359,31 @@ fn fn_call_to_type(fn_name: &String, args: &Option<Vec<Expr>>) -> ColType {
 }
 
 fn literal_to_type(lit: &Literal) -> ColType {
-    // match lit {
-    //   Literal::Blob(l) =>
-    // }
-    vec![]
+    match lit {
+        Literal::Numeric(l) => vec![(
+            TypeKind::Literal,
+            Some(BuiltinType::Number),
+            Some(l.to_string()),
+        )],
+        Literal::String(l) => vec![(
+            TypeKind::Literal,
+            Some(BuiltinType::String),
+            Some(l.to_string()),
+        )],
+        Literal::Blob(l) => vec![(
+            TypeKind::Literal,
+            Some(BuiltinType::Blob),
+            Some(l.to_string()),
+        )],
+        // TODO: what does it mean for a keyword literal to exist in a position the should result in a value?
+        Literal::Keyword(l) => vec![(TypeKind::Literal, None, Some(l.to_string()))],
+        Literal::Null => builtin_type(BuiltinType::Null),
+        Literal::CurrentDate => vec![(TypeKind::Literal, Some(BuiltinType::CurrentDate), None)],
+        Literal::CurrentTime => vec![(TypeKind::Literal, Some(BuiltinType::CurrentTime), None)],
+        Literal::CurrentTimestamp => {
+            vec![(TypeKind::Literal, Some(BuiltinType::CurrentTimestamp), None)]
+        }
+    }
 }
 
 fn subexpression_to_type(expressions: &Vec<Expr>) -> ColType {
