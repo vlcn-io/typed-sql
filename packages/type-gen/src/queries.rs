@@ -56,19 +56,22 @@ fn get_result_shape(
                 builtin_type(BuiltinType::String),
             )],
         ))),
-        Cmd::Stmt(Stmt::Select(select)) => {
-            let selection_set = selection_set(&select);
-            let from_shape = from_shape(&select, schema);
-            let with_relations = with_relations(&select);
-
-            // now craft the result shape by marrying the selection_set with the from_shape.
-            // for naked expression selects, determine type of the expression
-            // with_relations act as additional schemas atop our base schema
-            Ok(None)
-        }
+        Cmd::Stmt(Stmt::Select(select)) => Ok(Some(select_to_relation(&select, schema))),
         // TODO: update & returning, insert & returning, delete & returning
         Cmd::Stmt(_) => Ok(None),
     }
+}
+
+fn select_to_relation(select: &Select, schema: &HashMap<RelationName, Vec<Col>>) -> Relation {
+    let selection_set = selection_set(&select);
+    let from_shape = from_shape(&select, schema);
+    // TODO: can withs be nested?
+    let with_relations = with_relations(&select);
+
+    // now craft the result shape by marrying the selection_set with the from_shape.
+    // for naked expression selects, determine type of the expression
+    // with_relations act as additional schemas atop our base schema
+    (None, vec![])
 }
 
 fn selection_set(select: &Select) -> Vec<ResultColumn> {
@@ -143,7 +146,7 @@ fn from_shape(select: &Select, schema: &HashMap<RelationName, Vec<Col>>) -> Vec<
             // the relation is unnamed and unaliased
             if let Some(first) = vals.first() {
                 let namer = |i: usize, _e: &Expr| -> String { format!("column{}", i) };
-                vec![(None, expressions_to_columns(first, namer))]
+                vec![(None, expressions_to_columns(first, namer, schema))]
             } else {
                 vec![]
             }
@@ -199,11 +202,12 @@ fn with_relations(select: &Select) -> HashMap<RelationName, Vec<Col>> {
 fn expressions_to_columns<F: Fn(usize, &Expr) -> String>(
     expressions: &Vec<Expr>,
     namer: F,
+    schema: &HashMap<RelationName, Vec<Col>>,
 ) -> Vec<Col> {
     expressions
         .iter()
         .enumerate()
-        .map(|(i, e)| -> Col { expression_to_column(i, e, &namer) })
+        .map(|(i, e)| -> Col { expression_to_column(i, e, &namer, schema) })
         .collect::<Vec<_>>()
 }
 
@@ -211,18 +215,19 @@ fn expression_to_column<F: Fn(usize, &Expr) -> String>(
     i: usize,
     expression: &Expr,
     namer: &F,
+    schema: &HashMap<RelationName, Vec<Col>>,
 ) -> Col {
     let col_name = namer(i, expression);
-    let col_type = expression_to_type(expression);
+    let col_type = expression_to_type(expression, schema);
     (col_name, col_type)
 }
 
-fn expression_to_type(expression: &Expr) -> ColType {
+fn expression_to_type(expression: &Expr, schema: &HashMap<RelationName, Vec<Col>>) -> ColType {
     match expression {
         Expr::Binary(_, op, _) => op_to_type(op),
         Expr::Case {
             when_then_pairs, ..
-        } => when_then_to_type(when_then_pairs),
+        } => when_then_to_type(when_then_pairs, schema),
         Expr::Cast { type_name, .. } => type_from_type_name(type_name.name.to_string()),
         // DoublyQualified would be processed when the col name is returned then married against relations on which it is applied
         // None type returned at this point since we don't have full information
@@ -240,9 +245,9 @@ fn expression_to_type(expression: &Expr) -> ColType {
         Expr::Literal(lit) => literal_to_type(lit),
         Expr::Name(_) => vec![], // unresolved type. Will get resolved in a later step.
         Expr::NotNull { .. } => builtin_type(BuiltinType::Boolean),
-        Expr::Parenthesized(expr) => subexpression_to_type(expr),
+        Expr::Parenthesized(expr) => subexpression_to_type(expr, schema),
         Expr::Qualified(_, _) => vec![],
-        Expr::Subquery(select) => subquery_to_type(select), // a subquery in this position can only return 1 row 1 col
+        Expr::Subquery(select) => subquery_to_type(select, schema), // a subquery in this position can only return 1 row 1 col
         Expr::Unary(op, _) => unary_op_to_type(op),
         _ => vec![],
     }
@@ -286,9 +291,13 @@ fn unary_op_to_type(op: &UnaryOperator) -> ColType {
     }
 }
 
-fn when_then_to_type(when_then_pairs: &Vec<(Expr, Expr)>) -> ColType {
+fn when_then_to_type(
+    when_then_pairs: &Vec<(Expr, Expr)>,
+    schema: &HashMap<RelationName, Vec<Col>>,
+) -> ColType {
+    // TODO: error on missing when_then_pairs?
     if let Some(when_then) = when_then_pairs.first() {
-        expression_to_type(&when_then.1);
+        expression_to_type(&when_then.1, schema);
     }
     vec![]
 }
@@ -386,10 +395,27 @@ fn literal_to_type(lit: &Literal) -> ColType {
     }
 }
 
-fn subexpression_to_type(expressions: &Vec<Expr>) -> ColType {
-    vec![]
+fn subexpression_to_type(
+    expressions: &Vec<Expr>,
+    schema: &HashMap<RelationName, Vec<Col>>,
+) -> ColType {
+    // ok, this is weird that it is an array of expressions to refer to a sub-expression.
+    // it seems like there should only ever be one sub-expression if this appears in a position that can emit a result type.
+    // TODO: error on many expressions?
+    if let Some(e) = expressions.first() {
+        expression_to_type(e, schema)
+    } else {
+        vec![]
+    }
 }
 
-fn subquery_to_type(query: &Box<Select>) -> ColType {
-    vec![]
+// A subquery in a type position can only return a single column so it has a single type.
+fn subquery_to_type(query: &Box<Select>, schema: &HashMap<RelationName, Vec<Col>>) -> ColType {
+    let subquery_relation = select_to_relation(query, schema);
+    // TODO: error on many columns?
+    if let Some(col) = subquery_relation.1.first() {
+        col.1.to_vec()
+    } else {
+        vec![]
+    }
 }
