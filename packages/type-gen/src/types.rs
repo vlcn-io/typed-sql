@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum BuiltinType {
     Number,
     Boolean,
@@ -21,7 +21,7 @@ pub enum BuiltinType {
     CurrentTimestamp,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum TypeKind {
     Literal,
     Builtin,
@@ -29,7 +29,7 @@ pub enum TypeKind {
     Unresolved,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum Constraint {
     NotNull,
     Unique,

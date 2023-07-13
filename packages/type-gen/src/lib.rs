@@ -26,8 +26,10 @@ pub fn get_query_result_shapes(query: String, schema: JsValue) -> Result<JsValue
     let ddl: Vec<NamedRelation> = serde_wasm_bindgen::from_value(schema)?;
     let record_map: HashMap<_, _> = ddl.into_iter().collect();
 
-    let ret = queries::get_result_shapes(query, record_map);
-    Ok(JsValue::from_str("Ok"))
+    match queries::get_result_shapes(query, record_map) {
+        Ok(shape) => Ok(serde_wasm_bindgen::to_value(&shape)?),
+        _ => Err(JsValue::from_str("UnknownError")),
+    }
 }
 
 // #[cfg(test)]
