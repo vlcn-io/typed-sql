@@ -4,7 +4,6 @@ import { ESLintUtils } from "@typescript-eslint/utils";
 import * as ts from "typescript";
 import { parseDdlRelations, getDdlRelations } from "@vlcn.io/type-gen-ts-adapter";
 
-
 const codegen: eslint.Rule.RuleModule = {
   // @ts-expect-error types are wrong?
   meta: { fixable: true },

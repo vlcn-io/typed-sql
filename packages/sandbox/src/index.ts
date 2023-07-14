@@ -7,14 +7,14 @@ type ZOMG = any;
 
 const sql = createSQL<{
   foo: {
-    a: string;
-    b: number;
-  };
-  bar: {
-    id: string;
-    name: string;
-    weight: number;
-  };
+      a: string | null,
+b: number | null
+    },
+bar: {
+      id: string | null,
+name: string | null,
+weight: number | null
+    }
 }>(
   `
   CREATE TABLE IF NOT EXISTS foo (a TEXT, b INTEGER);

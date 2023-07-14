@@ -9,6 +9,6 @@
     { "path": "../packages/plugin" },
     { "path": "../packages/runtime" },
     { "path": "../packages/sandbox" },
-    { "path": "../packages/type-gen-ts-adapter" }
+    // { "path": "../packages/type-gen-ts-adapter" }
   ]
 }
