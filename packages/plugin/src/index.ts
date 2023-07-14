@@ -2,7 +2,7 @@ import type * as eslint from "eslint";
 import * as fs from "fs";
 import { ESLintUtils } from "@typescript-eslint/utils";
 import * as ts from "typescript";
-import { parseDdlRelations, getDdlRelations } from "@vlcn.io/type-gen-ts-adapter";
+import { parseDdlRelations, getDdlRelations, getQueryRelations, parseQueryRelations } from "@vlcn.io/type-gen-ts-adapter";
 
 const codegen: eslint.Rule.RuleModule = {
   // @ts-expect-error types are wrong?
@@ -22,6 +22,11 @@ const codegen: eslint.Rule.RuleModule = {
   },
 };
 
+// TODO: temporary hack for demonstration purposes
+// In reality we need a DAG of dependencies and a place to save
+// schemaRelations tied to . . . schema name or type symbol or something stable
+// to look up in a future pass over source files.
+let schemaRelations: ReturnType<typeof getDdlRelations> | null = null;
 function visit(
   context: eslint.Rule.RuleContext,
   sourceFile: ts.SourceFile,
@@ -31,12 +36,14 @@ function visit(
   if (ts.isCallExpression(node)) {
     const name = node.expression.getText();
     if (name === "createSQL") {
-      processCreateSQL(context, sourceFile, node, checker);
+      schemaRelations = processCreateSQL(context, sourceFile, node, checker);
     }
   } else if (ts.isTaggedTemplateExpression(node)) {
     const tagName = node.tag.getText();
+    // TODO: processing tag name attached to schema name is likely better
+    // so multiple sql tags for different schemas can be present in the same file.
     if (tagName === "sql") {
-      processSqlTemplate(context, sourceFile, node, checker);
+      processSqlTemplate(context, sourceFile, node, checker, schemaRelations!);
     }
   }
 
@@ -48,14 +55,16 @@ function processCreateSQL(
   sourceFile: ts.SourceFile,
   node: ts.CallExpression,
   checker: ts.TypeChecker
-) {
+): ReturnType<typeof getDdlRelations> {
   const argumentNode = node.arguments[0];
-  if (!ts.isStringTextContainingNode(argumentNode)) return;
+  if (!ts.isStringTextContainingNode(argumentNode)) return [];
 
   const typeNode = node.typeArguments?.[0];
   const existing = `<${typeNode?.getText()}>`;
-  const replacement = genRecordShapeCode(argumentNode.text);
-  if (normalize(existing) === normalize(replacement)) return;
+  // TODO: fixme
+  const schemaRelations = getDdlRelations(argumentNode.text.replace(/\`/g, ""));
+  const replacement = genRecordShapeCode(schemaRelations);
+  if (normalize(existing) === normalize(replacement)) return schemaRelations;
 
   const range: [number, number] = [
     node.expression.getEnd(),
@@ -67,13 +76,16 @@ function processCreateSQL(
     loc: { line: pos.line, column: pos.character },
     fix: (fixer) => fixer.replaceTextRange(range, replacement),
   });
+
+  return schemaRelations;
 }
 
 function processSqlTemplate(
   context: eslint.Rule.RuleContext,
   sourceFile: ts.SourceFile,
   node: ts.TaggedTemplateExpression,
-  checker: ts.TypeChecker
+  checker: ts.TypeChecker,
+  schemaRelations: ReturnType<typeof getDdlRelations>
 ) {
   const tagType = checker.getTypeAtLocation(node.tag);
   const signature = checker.getSignaturesOfType(tagType, ts.SignatureKind.Call);
@@ -93,7 +105,7 @@ function processSqlTemplate(
   const existing = typeNode ? `<${typeNode.getText()}>` : "";
   const replacement = coerced
     ? ""
-    : calculateQueryShape(checker, schemaType, node.template.getText());
+    : genQueryShape(checker, schemaType, node.template.getText(), schemaRelations);
   if (normalize(existing) === normalize(replacement)) return;
 
   const range: [number, number] = [node.tag.getEnd(), node.template.getStart()];
@@ -105,19 +117,18 @@ function processSqlTemplate(
   });
 }
 
-function genRecordShapeCode(query: string): string {
+// TODO: take in original indentation offset
+function genRecordShapeCode(relations: ReturnType<typeof getDdlRelations>): string {
   try {
-    // TODO: fix me
-    query = query.replace(/\`/g, "");
-    const recordTypes = parseDdlRelations(getDdlRelations(query));
+    const recordTypes = parseDdlRelations(relations);
     return `<{
   ${Object.entries(recordTypes).map(([key, value]) => {
     return `${key.replace("main.", '')}: {
-      ${Object.entries(value).map(([key, value]) => {
+    ${Object.entries(value).map(([key, value]) => {
         return `${key}: ${value}`;
-      }).join(",\n")}
-    }`;
-  }).join(",\n")}
+    }).join(",\n    ")}
+  }`;
+}).join(",\n  ")}
 }>`;
   } catch (e) {
     console.log("some error");
@@ -139,11 +150,17 @@ function getChildren(node: ts.Node): ts.Node[] {
 const normalize = (val: string) =>
   val.trim().replace(/\s/g, " ").replace(/,|;/g, "");
 
-function calculateQueryShape(
+function genQueryShape(
   checker: ts.TypeChecker,
   schemaType: ts.Symbol,
-  query: string
+  query: string,
+  schemaRelations: ReturnType<typeof getDdlRelations>
 ) {
+  // TODO: fixme! We only want to replace first and last occurrence of `
+  query = query.replaceAll('`', '');
+
+  // TODO: they could have passed many queries...
+  const shapes = parseQueryRelations(getQueryRelations(query, schemaRelations))[0];
   // const type = checker.getTypeOfSymbol(schemaType);
   // const props = type.getProperties();
   // top level props are records.
@@ -151,5 +168,11 @@ function calculateQueryShape(
   // prop type is record type
   // pack all these into dicts to pass over to type generator
   // need to convert schemaType back to raw relation type(s)
-  return "<ZOMG>";
+
+  // TODO: indent by original file indentation of surrounding context
+  return `<[{
+  ${Object.entries(shapes).map(([key, value]) => {
+    return `${key}: ${value}`;
+  }).join(",\n  ")}
+}]>`;
 }
