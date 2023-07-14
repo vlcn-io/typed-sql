@@ -2,7 +2,8 @@ import type * as eslint from "eslint";
 import * as fs from "fs";
 import { ESLintUtils } from "@typescript-eslint/utils";
 import * as ts from "typescript";
-import { get_relation_shapes } from "typed-sql-type-gen";
+import { parseDdlRelations, getDdlRelations } from "@vlcn.io/type-gen-ts-adapter";
+
 
 const codegen: eslint.Rule.RuleModule = {
   // @ts-expect-error types are wrong?
@@ -105,15 +106,11 @@ function processSqlTemplate(
   });
 }
 
-type RecordName = string;
-type PropName = string;
-type PropType = string | undefined;
-type RecordShapes = [RecordName, [PropName, PropType][]][];
 function genRecordShapeCode(query: string): string {
   try {
     // TODO: fix me
     query = query.replace(/\`/g, "");
-    const recordTypes = get_relation_shapes(query) as RecordShapes;
+    const recordTypes = parseDdlRelations(getDdlRelations(query));
     return `<{
 ${recordTypes
   .map((r) => {
@@ -129,30 +126,6 @@ ${genPropsCode(r[1])}
   }
 }
 
-function genPropsCode(props: [PropName, PropType][]) {
-  // TODO: nullability!
-  return props
-    .map((p) => {
-      return `    ${p[0]}: ${propTypeToTsType(p[1])}`;
-    })
-    .join(",\n");
-}
-
-function propTypeToTsType(t: PropType) {
-  if (t == null) {
-    return "any";
-  }
-  switch (t?.toUpperCase()) {
-    case "TEXT":
-      return "string";
-    case "INTEGER":
-    case "FLOAT":
-      return "number";
-    case "BOOL":
-    case "BOOLEAN":
-      return "boolean";
-  }
-}
 
 export const rules = { codegen };
 
@@ -178,6 +151,6 @@ function calculateQueryShape(
   // prop name is record name
   // prop type is record type
   // pack all these into dicts to pass over to type generator
-  // https://rustwasm.github.io/wasm-bindgen/
+  // need to convert schemaType back to raw relation type(s)
   return "<ZOMG>";
 }
