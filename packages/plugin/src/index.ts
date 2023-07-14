@@ -112,13 +112,13 @@ function genRecordShapeCode(query: string): string {
     query = query.replace(/\`/g, "");
     const recordTypes = parseDdlRelations(getDdlRelations(query));
     return `<{
-${recordTypes
-  .map((r) => {
-    return `  ${r[0]}: {
-${genPropsCode(r[1])}
-  }`;
-  })
-  .join(",\n")}
+  ${Object.entries(recordTypes).map(([key, value]) => {
+    return `${key.replace("main.", '')}: {
+      ${Object.entries(value).map(([key, value]) => {
+        return `${key}: ${value}`;
+      }).join(",\n")}
+    }`;
+  }).join(",\n")}
 }>`;
   } catch (e) {
     console.log("some error");
