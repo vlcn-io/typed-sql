@@ -32,15 +32,15 @@ importers:
       '@typescript-eslint/utils':
         specifier: ^5.61.0
         version: 5.61.0(eslint@8.44.0)(typescript@5.1.6)
+      '@vlcn.io/type-gen-ts-adapter':
+        specifier: workspace:*
+        version: link:../type-gen-ts-adapter
       eslint:
         specifier: ^8.44.0
         version: 8.44.0
       expect:
         specifier: ^29.6.1
         version: 29.6.1
-      typed-sql-type-gen:
-        specifier: workspace:*
-        version: link:../type-gen/pkg
       typescript:
         specifier: ^5.1.6
         version: 5.1.6
@@ -89,7 +89,7 @@ importers:
         specifier: ^5.1.6
         version: 5.1.6
 
-  packages/type-gen-ts-tests:
+  packages/type-gen-ts-adapter:
     dependencies:
       typed-sql-type-gen:
         specifier: workspace:*

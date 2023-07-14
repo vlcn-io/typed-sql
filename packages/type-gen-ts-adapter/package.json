@@ -1,9 +1,10 @@
 {
-  "name": "type-gen-ts-tests",
+  "name": "@vlcn.io/type-gen-ts-adapter",
   "private": "true",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
     "test": "vitest",
