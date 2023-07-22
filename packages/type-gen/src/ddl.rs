@@ -1,7 +1,8 @@
+use crate::error::Error;
 use fallible_iterator::FallibleIterator;
 use sqlite3_parser::{
     ast::{Cmd, ColumnConstraint, ColumnDefinition, CreateTableBody, Stmt},
-    lexer::sql::{Error, Parser},
+    lexer::sql::Parser,
 };
 
 use crate::types::*;
@@ -13,7 +14,7 @@ pub fn get_relation_shapes(ddl: String) -> Result<Vec<NamedRelation>, Error> {
     while let Some(cmd) = parser.next()? {
         match cmd {
             Cmd::Stmt(stmt) => {
-                if let Some(record) = maybe_record(stmt) {
+                if let Some(record) = maybe_record(stmt)? {
                     ret.push(record)
                 }
             }
@@ -24,27 +25,28 @@ pub fn get_relation_shapes(ddl: String) -> Result<Vec<NamedRelation>, Error> {
     Ok(ret)
 }
 
-fn maybe_record(stmt: Stmt) -> Option<NamedRelation> {
+fn maybe_record(stmt: Stmt) -> Result<Option<NamedRelation>, String> {
     match stmt {
-        Stmt::CreateTable { tbl_name, body, .. } => {
-            Some((format!("main.{}", tbl_name.name.0), get_properties(body)))
-        }
-        _ => None,
+        Stmt::CreateTable { tbl_name, body, .. } => Ok(Some((
+            format!("main.{}", tbl_name.name.0),
+            get_properties(body)?,
+        ))),
+        _ => Ok(None),
     }
 }
 
-fn get_properties(body: CreateTableBody) -> Vec<Col> {
+fn get_properties(body: CreateTableBody) -> Result<Vec<Col>, String> {
     // TODO: AsSelect would depend on things already defined.
     // We should allow access to that then so we can support AsSelect.
     // The data format should then match what JS provides us when asking for types on queries.
     match body {
         CreateTableBody::AsSelect(_) => {
-            vec![]
+            Err("Create table via Select is not yet supported".to_string())
         }
-        CreateTableBody::ColumnsAndConstraints { columns, .. } => columns
+        CreateTableBody::ColumnsAndConstraints { columns, .. } => Ok(columns
             .into_iter()
             .map(|c| column_as_property(c))
-            .collect::<Vec<Col>>(),
+            .collect::<Vec<Col>>()),
     }
 }
 
