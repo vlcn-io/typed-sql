@@ -19,7 +19,7 @@ importers:
         version: 5.61.0(eslint@8.44.0)(typescript@5.1.6)
       '@vlcn.io/eslint-plugin-typed-sql':
         specifier: workspace:*
-        version: link:packages/plugin
+        version: link:packages/eslint-plugin
       eslint:
         specifier: ^8.44.0
         version: 8.44.0
@@ -27,7 +27,16 @@ importers:
         specifier: ^5.1.6
         version: 5.1.6
 
-  packages/plugin:
+  incubator/typed-db:
+    devDependencies:
+      typescript:
+        specifier: ^5.1.6
+        version: 5.1.6
+      vitest:
+        specifier: ^0.33.0
+        version: 0.33.0
+
+  packages/eslint-plugin:
     dependencies:
       '@typescript-eslint/utils':
         specifier: ^5.61.0
@@ -52,34 +61,6 @@ importers:
         specifier: ^20.4.0
         version: 20.4.0
 
-  packages/sandbox:
-    dependencies:
-      '@vlcn.io/typed-sql':
-        specifier: workspace:*
-        version: link:../typed-sql
-      better-sqlite3:
-        specifier: ^8.4.0
-        version: 8.4.0
-    devDependencies:
-      '@types/better-sqlite3':
-        specifier: ^7.6.4
-        version: 7.6.4
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^5.61.0
-        version: 5.61.0(@typescript-eslint/parser@5.61.0)(eslint@8.44.0)(typescript@5.1.6)
-      '@typescript-eslint/parser':
-        specifier: ^5.61.0
-        version: 5.61.0(eslint@8.44.0)(typescript@5.1.6)
-      '@vlcn.io/eslint-plugin-typed-sql':
-        specifier: workspace:*
-        version: link:../plugin
-      eslint:
-        specifier: ^8.44.0
-        version: 8.44.0
-      typescript:
-        specifier: ^5.1.6
-        version: 5.1.6
-
   packages/type-gen-ts-adapter:
     dependencies:
       typed-sql-type-gen:
@@ -95,15 +76,6 @@ importers:
 
   packages/type-gen/pkg: {}
 
-  packages/typed-db:
-    devDependencies:
-      typescript:
-        specifier: ^5.1.6
-        version: 5.1.6
-      vitest:
-        specifier: ^0.33.0
-        version: 0.33.0
-
   packages/typed-sql:
     devDependencies:
       typescript:
@@ -112,6 +84,34 @@ importers:
       vitest:
         specifier: ^0.33.0
         version: 0.33.0
+
+  sandbox:
+    dependencies:
+      '@vlcn.io/typed-sql':
+        specifier: workspace:*
+        version: link:../packages/typed-sql
+      better-sqlite3:
+        specifier: ^8.4.0
+        version: 8.4.0
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.4
+        version: 7.6.4
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^5.61.0
+        version: 5.61.0(@typescript-eslint/parser@5.61.0)(eslint@8.44.0)(typescript@5.1.6)
+      '@typescript-eslint/parser':
+        specifier: ^5.61.0
+        version: 5.61.0(eslint@8.44.0)(typescript@5.1.6)
+      '@vlcn.io/eslint-plugin-typed-sql':
+        specifier: workspace:*
+        version: link:../packages/eslint-plugin
+      eslint:
+        specifier: ^8.44.0
+        version: 8.44.0
+      typescript:
+        specifier: ^5.1.6
+        version: 5.1.6
 
   tsbuild-all:
     devDependencies:

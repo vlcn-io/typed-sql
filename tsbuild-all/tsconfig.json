@@ -7,9 +7,9 @@
   "include": ["./src/"],
   "references": [
     { "path": "../packages/typed-sql" },
-    { "path": "../packages/typed-db" },
-    { "path": "../packages/plugin" },
-    { "path": "../packages/sandbox" },
+    { "path": "../incubator/typed-db" },
+    { "path": "../packages/eslint-plugin" },
+    { "path": "../sandbox" },
     // { "path": "../packages/type-gen-ts-adapter" }
   ]
 }

@@ -3,8 +3,10 @@
   "compilerOptions": {
     "outDir": "./lib/",
     "rootDir": "./src",
-    "allowSyntheticDefaultImports": true,
+    "allowSyntheticDefaultImports": true
   },
   "include": ["./src/"],
-  "references": [{ "path": "../typed-sql" }]
+  "references": [{
+    "path": "../../packages/typed-sql"
+  }]
 }

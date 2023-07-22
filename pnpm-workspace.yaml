@@ -1,8 +1,8 @@
 packages:
   - 'packages/typed-sql'
-  - 'packages/typed-db'
-  - 'packages/sandbox'
+  - 'incubator/typed-db'
+  - 'sandbox'
   - 'packages/type-gen/pkg'
-  - 'packages/plugin'
+  - 'packages/eslint-plugin'
   - 'packages/type-gen-ts-adapter'
   - 'tsbuild-all'

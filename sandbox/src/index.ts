@@ -15,6 +15,5 @@ CREATE TABLE bar (d INTEGER, e FLOAT)`;
 
 const query = App.sql<[{
   a: number,
-  b: string | null,
-  c: bigint
-}]>`SELECT * FROM foo`
+  b: string | null
+}]>`SELECT a, b FROM foo`
