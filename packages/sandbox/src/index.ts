@@ -14,6 +14,7 @@ const App = declareSchema<{
 CREATE TABLE bar (d INTEGER, e FLOAT)`;
 
 const query = App.sql<[{
-  d: number | null,
-  e: number | null
-}]>`SELECT * FROM (SELECT * FROM bar)`
+  a: number,
+  b: string | null,
+  c: bigint
+}]>`SELECT * FROM foo`

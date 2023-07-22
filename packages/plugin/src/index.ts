@@ -44,6 +44,7 @@ function visit(
   }
 
   const tagName = node.tag.getText();
+  console.log(tagName);
   if (tagName.endsWith(".sql")) {
     processSqlTemplate(context, sourceFile, node, checker, schemaRelations!);
   } else if (tagName.endsWith("declareSchema")) {
@@ -103,39 +104,41 @@ function processSqlTemplate(
   checker: ts.TypeChecker,
   schemaRelations: ReturnType<typeof getDdlRelations>
 ) {
-  const tagType = checker.getTypeAtLocation(node.tag);
-  const signature = checker.getSignaturesOfType(tagType, ts.SignatureKind.Call);
-  if (!signature.length) return;
-  const sqlType = checker.getReturnTypeOfSignature(signature[0]);
-  const schemaType = sqlType
-    .getProperties()
-    .find((x) => x.name.includes("schema"));
-  if (!schemaType) return;
-
-  const siblings = node.parent.getChildren();
-  const nextNode = siblings[siblings.indexOf(node) + 2];
-  const coerced =
-    nextNode && ts.isIdentifier(nextNode) && nextNode.text === "as";
-
-  const typeNode = node.typeArguments?.[0];
-  const existing = typeNode ? `<${typeNode.getText()}>` : "";
-  const replacement = coerced
-    ? ""
-    : genQueryShape(
-        checker,
-        schemaType,
-        node.template.getText(),
-        schemaRelations
-      );
-  if (normalize(existing) === normalize(replacement)) return;
-
-  const range: [number, number] = [node.tag.getEnd(), node.template.getStart()];
-  const pos = sourceFile.getLineAndCharacterOfPosition(range[0]);
-  context.report({
-    message: `content does not match: ${replacement}`,
-    loc: { line: pos.line, column: pos.character },
-    fix: (fixer) => fixer.replaceTextRange(range, replacement),
-  });
+  const children = getChildren(node);
+  const templateStringNode = children[children.length - 1];
+  const schemaAccessNode = children[0];
+  const schemaNode = getChildren(schemaAccessNode)[0];
+  const schemaType = checker
+    .getTypeAtLocation(schemaNode)
+    .getProperty("__type")!;
+  // range of text to replace. Inclusive of `<` and `>` if they exist.
+  const range: [number, number] = [
+    schemaAccessNode.getEnd(),
+    templateStringNode.getStart(),
+  ];
+  const maybeExistingNode = children[1];
+  if (ts.isTemplateLiteral(templateStringNode)) {
+    // process it, extracting type information
+    let existingContent = "";
+    if (maybeExistingNode != templateStringNode) {
+      existingContent = normalize(`<${maybeExistingNode.getText()}>`);
+    }
+    const replacement = genQueryShape(
+      checker,
+      schemaType,
+      templateStringNode.getText(),
+      schemaRelations
+    );
+    if (existingContent == normalize(replacement)) {
+      return;
+    }
+    const pos = sourceFile.getLineAndCharacterOfPosition(range[0]);
+    context.report({
+      message: `content does not match: ${replacement}`,
+      loc: { line: pos.line, column: pos.character },
+      fix: (fixer) => fixer.replaceTextRange(range, replacement),
+    });
+  }
 }
 
 // TODO: take in original indentation offset
