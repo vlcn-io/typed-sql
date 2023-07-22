@@ -1,6 +1,6 @@
-import { createSQL, type ResultOf, type SchemaOf } from "@vlcn.io/typed-sql";
+import { declareSchema } from "@vlcn.io/typed-sql";
 
-const sql = createSQL<{
+const App = declareSchema<{
   foo: {
     a: number,
     b: string | null,
@@ -10,10 +10,10 @@ const sql = createSQL<{
     d: number | null,
     e: number | null
   }
-}>(`CREATE TABLE foo (a INTEGER NOT NULL, b TEXT, c BIGINT NOT NULL);
-CREATE TABLE bar (d INTEGER, e FLOAT)`);
+}>`CREATE TABLE foo (a INTEGER NOT NULL, b TEXT, c BIGINT NOT NULL);
+CREATE TABLE bar (d INTEGER, e FLOAT)`;
 
-const query = sql<[{
+const query = App.sql<[{
   d: number | null,
   e: number | null
 }]>`SELECT * FROM (SELECT * FROM bar)`

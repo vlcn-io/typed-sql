@@ -8,7 +8,7 @@
   "references": [
     { "path": "../packages/typed-sql" },
     { "path": "../packages/typed-db" },
-    { "path": "../packages/runtime" },
+    { "path": "../packages/plugin" },
     { "path": "../packages/sandbox" },
     // { "path": "../packages/type-gen-ts-adapter" }
   ]
