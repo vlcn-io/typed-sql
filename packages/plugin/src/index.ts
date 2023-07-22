@@ -2,7 +2,12 @@ import type * as eslint from "eslint";
 import * as fs from "fs";
 import { ESLintUtils } from "@typescript-eslint/utils";
 import * as ts from "typescript";
-import { parseDdlRelations, getDdlRelations, getQueryRelations, parseQueryRelations } from "@vlcn.io/type-gen-ts-adapter";
+import {
+  parseDdlRelations,
+  getDdlRelations,
+  getQueryRelations,
+  parseQueryRelations,
+} from "@vlcn.io/type-gen-ts-adapter";
 
 const codegen: eslint.Rule.RuleModule = {
   // @ts-expect-error types are wrong?
@@ -33,51 +38,62 @@ function visit(
   node: ts.Node,
   checker: ts.TypeChecker
 ) {
-  if (ts.isCallExpression(node)) {
-    const name = node.expression.getText();
-    if (name === "createSQL") {
-      schemaRelations = processCreateSQL(context, sourceFile, node, checker);
-    }
-  } else if (ts.isTaggedTemplateExpression(node)) {
-    const tagName = node.tag.getText();
-    // TODO: processing tag name attached to schema name is likely better
-    // so multiple sql tags for different schemas can be present in the same file.
-    if (tagName === "sql") {
-      processSqlTemplate(context, sourceFile, node, checker, schemaRelations!);
-    }
+  if (!ts.isTaggedTemplateExpression(node)) {
+    ts.forEachChild(node, (node) => visit(context, sourceFile, node, checker));
+    return;
   }
 
-  ts.forEachChild(node, (node) => visit(context, sourceFile, node, checker));
+  const tagName = node.tag.getText();
+  if (tagName.endsWith(".sql")) {
+    processSqlTemplate(context, sourceFile, node, checker, schemaRelations!);
+  } else if (tagName.endsWith("declareSchema")) {
+    schemaRelations = processDeclareSchemaTemplate(
+      context,
+      sourceFile,
+      node,
+      checker
+    );
+  }
 }
 
-function processCreateSQL(
+function processDeclareSchemaTemplate(
   context: eslint.Rule.RuleContext,
   sourceFile: ts.SourceFile,
-  node: ts.CallExpression,
+  node: ts.TaggedTemplateExpression,
   checker: ts.TypeChecker
 ): ReturnType<typeof getDdlRelations> {
-  const argumentNode = node.arguments[0];
-  if (!ts.isStringTextContainingNode(argumentNode)) return [];
-
-  const typeNode = node.typeArguments?.[0];
-  const existing = `<${typeNode?.getText()}>`;
-  // TODO: fixme
-  const schemaRelations = getDdlRelations(argumentNode.text.replace(/\`/g, ""));
-  const replacement = genRecordShapeCode(schemaRelations);
-  if (normalize(existing) === normalize(replacement)) return schemaRelations;
-
+  const children = getChildren(node);
+  const templateStringNode = children[children.length - 1];
+  const maybeExistingNode = children[1];
+  const schemaAccessNode = children[0];
   const range: [number, number] = [
-    node.expression.getEnd(),
-    node.typeArguments ? node.typeArguments.end + 1 : node.expression.getEnd(),
+    schemaAccessNode.getEnd(),
+    templateStringNode.getStart(),
   ];
-  const pos = sourceFile.getLineAndCharacterOfPosition(range[0]);
-  context.report({
-    message: `content does not match: ${replacement}`,
-    loc: { line: pos.line, column: pos.character },
-    fix: (fixer) => fixer.replaceTextRange(range, replacement),
-  });
+  if (ts.isTemplateLiteral(templateStringNode)) {
+    let existingContent = "";
+    if (maybeExistingNode != templateStringNode) {
+      existingContent = normalize(`<${maybeExistingNode.getText()}>`);
+    }
+    // TODO: fixme. Just trim first and last `
+    const schemaRelations = getDdlRelations(
+      templateStringNode.getText().replace(/\`/g, "")
+    );
+    const replacement = genRecordShapeCode(schemaRelations);
+    if (existingContent == normalize(replacement)) {
+      return schemaRelations;
+    }
+    const pos = sourceFile.getLineAndCharacterOfPosition(range[0]);
+    context.report({
+      message: `content does not match: ${replacement}`,
+      loc: { line: pos.line, column: pos.character },
+      fix: (fixer) => fixer.replaceTextRange(range, replacement),
+    });
 
-  return schemaRelations;
+    return schemaRelations;
+  }
+
+  return [];
 }
 
 function processSqlTemplate(
@@ -105,7 +121,12 @@ function processSqlTemplate(
   const existing = typeNode ? `<${typeNode.getText()}>` : "";
   const replacement = coerced
     ? ""
-    : genQueryShape(checker, schemaType, node.template.getText(), schemaRelations);
+    : genQueryShape(
+        checker,
+        schemaType,
+        node.template.getText(),
+        schemaRelations
+      );
   if (normalize(existing) === normalize(replacement)) return;
 
   const range: [number, number] = [node.tag.getEnd(), node.template.getStart()];
@@ -118,24 +139,29 @@ function processSqlTemplate(
 }
 
 // TODO: take in original indentation offset
-function genRecordShapeCode(relations: ReturnType<typeof getDdlRelations>): string {
+function genRecordShapeCode(
+  relations: ReturnType<typeof getDdlRelations>
+): string {
   try {
     const recordTypes = parseDdlRelations(relations);
     return `<{
-  ${Object.entries(recordTypes).map(([key, value]) => {
-    return `${key.replace("main.", '')}: {
-    ${Object.entries(value).map(([key, value]) => {
+  ${Object.entries(recordTypes)
+    .map(([key, value]) => {
+      return `${key.replace("main.", "")}: {
+    ${Object.entries(value)
+      .map(([key, value]) => {
         return `${key}: ${value}`;
-    }).join(",\n    ")}
+      })
+      .join(",\n    ")}
   }`;
-}).join(",\n  ")}
+    })
+    .join(",\n  ")}
 }>`;
   } catch (e) {
     console.log("some error");
     return `<${e}>` as string;
   }
 }
-
 
 export const rules = { codegen };
 
@@ -157,10 +183,12 @@ function genQueryShape(
   schemaRelations: ReturnType<typeof getDdlRelations>
 ) {
   // TODO: fixme! We only want to replace first and last occurrence of `
-  query = query.replaceAll('`', '');
+  query = query.replaceAll("`", "");
 
   // TODO: they could have passed many queries...
-  const shapes = parseQueryRelations(getQueryRelations(query, schemaRelations))[0];
+  const shapes = parseQueryRelations(
+    getQueryRelations(query, schemaRelations)
+  )[0];
   // const type = checker.getTypeOfSymbol(schemaType);
   // const props = type.getProperties();
   // top level props are records.
@@ -171,8 +199,10 @@ function genQueryShape(
 
   // TODO: indent by original file indentation of surrounding context
   return `<[{
-  ${Object.entries(shapes).map(([key, value]) => {
-    return `${key}: ${value}`;
-  }).join(",\n  ")}
+  ${Object.entries(shapes)
+    .map(([key, value]) => {
+      return `${key}: ${value}`;
+    })
+    .join(",\n  ")}
 }]>`;
 }

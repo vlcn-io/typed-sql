@@ -1,7 +1,8 @@
 packages:
-  - 'packages/plugin'
+  - 'packages/typed-sql'
+  - 'packages/typed-db'
   - 'packages/sandbox'
   - 'packages/type-gen/pkg'
-  - 'packages/runtime'
+  - 'packages/plugin'
   - 'packages/type-gen-ts-adapter'
   - 'tsbuild-all'

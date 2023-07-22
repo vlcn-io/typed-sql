@@ -52,20 +52,11 @@ importers:
         specifier: ^20.4.0
         version: 20.4.0
 
-  packages/runtime:
-    devDependencies:
-      typescript:
-        specifier: ^5.1.6
-        version: 5.1.6
-      vitest:
-        specifier: ^0.33.0
-        version: 0.33.0
-
   packages/sandbox:
     dependencies:
       '@vlcn.io/typed-sql':
         specifier: workspace:*
-        version: link:../runtime
+        version: link:../typed-sql
       better-sqlite3:
         specifier: ^8.4.0
         version: 8.4.0
@@ -103,6 +94,24 @@ importers:
         version: 0.33.0
 
   packages/type-gen/pkg: {}
+
+  packages/typed-db:
+    devDependencies:
+      typescript:
+        specifier: ^5.1.6
+        version: 5.1.6
+      vitest:
+        specifier: ^0.33.0
+        version: 0.33.0
+
+  packages/typed-sql:
+    devDependencies:
+      typescript:
+        specifier: ^5.1.6
+        version: 5.1.6
+      vitest:
+        specifier: ^0.33.0
+        version: 0.33.0
 
   tsbuild-all:
     devDependencies:

@@ -1,0 +1,20 @@
+{
+  "name": "@vlcn.io/typed-db",
+  "version": "1.0.0",
+  "description": "",
+  "main": "lib/index.js",
+  "module": "lib/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "vitest",
+    "lint": "eslint --fix src",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.1.6",
+    "vitest": "^0.33.0"
+  }
+}

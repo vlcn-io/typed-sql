@@ -6,7 +6,8 @@
   },
   "include": ["./src/"],
   "references": [
-    { "path": "../packages/plugin" },
+    { "path": "../packages/typed-sql" },
+    { "path": "../packages/typed-db" },
     { "path": "../packages/runtime" },
     { "path": "../packages/sandbox" },
     // { "path": "../packages/type-gen-ts-adapter" }
