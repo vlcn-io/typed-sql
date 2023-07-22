@@ -581,7 +581,7 @@ fn expression_to_type(
         Expr::Binary(_, op, _) => Ok(op_to_type(op)),
         Expr::Case {
             when_then_pairs, ..
-        } => Ok(when_then_to_type(when_then_pairs, from_relations, schema)),
+        } => when_then_to_type(when_then_pairs, from_relations, schema),
         Expr::Cast { type_name, .. } => Ok(type_from_type_name(type_name.name.to_string())),
         // DoublyQualified would be processed when the col name is returned then married against relations on which it is applied
         // None type returned at this point since we don't have full information
@@ -650,12 +650,13 @@ fn when_then_to_type(
     when_then_pairs: &Vec<(Expr, Expr)>,
     from_relations: &Vec<Relation>,
     schema: &HashMap<RelationName, Vec<Col>>,
-) -> ColType {
-    // TODO: error on missing when_then_pairs?
+) -> Result<ColType, Error> {
     if let Some(when_then) = when_then_pairs.first() {
-        expression_to_type(&when_then.1, from_relations, schema);
+        expression_to_type(&when_then.1, from_relations, schema)?;
     }
-    vec![]
+    Err(Error::Other(
+        "Found a WHEN statement without a THEN".to_string(),
+    ))
 }
 
 // Type needs to be more than a string given nullability is involved.

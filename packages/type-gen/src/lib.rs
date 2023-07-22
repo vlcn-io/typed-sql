@@ -20,13 +20,13 @@ pub fn get_relation_shapes(schema: String) -> Result<JsValue, JsValue> {
 }
 
 #[wasm_bindgen]
-pub fn get_query_result_shapes(query: String, schema: JsValue) -> Result<JsValue, JsValue> {
+pub fn get_query_result_shapes(query: String, schema: JsValue) -> Result<JsValue, JsError> {
     let ddl: Vec<NamedRelation> = serde_wasm_bindgen::from_value(schema)?;
     let record_map: HashMap<_, _> = ddl.into_iter().collect();
 
     match queries::get_result_shapes(query, record_map) {
         Ok(shape) => Ok(serde_wasm_bindgen::to_value(&shape)?),
-        _ => Err(JsValue::from_str("UnknownError")),
+        Err(Error::Parse(e)) | Err(Error::Other(e)) => Err(JsError::new(&e)),
     }
 }
 
