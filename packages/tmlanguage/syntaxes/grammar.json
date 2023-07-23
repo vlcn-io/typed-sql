@@ -1,0 +1,53 @@
+{
+  "__COMMENT__": "TypeScript patterns are taken from https://github.com/microsoft/vscode/blob/74623bc93c5482cbf6fbb78346167cb39717b703/extensions/typescript-basics/syntaxes/TypeScript.tmLanguage.json",
+  "scopeName": "inline.tagged-template-sql",
+  "injectionSelector": "L:source -comment -string",
+  "patterns": [
+    {
+      "__COMMENT__": "Literals tagged with an sql comment, e.g. /*sql*/`SELECT ...`",
+      "begin": "(/\\*\\s*(?i)sql(?-i)\\s*\\*/)\\s*(?=`)",
+      "beginCaptures": {
+        "1": { "name": "comment.block.ts" }
+      },
+      "end": "(?<=`)",
+      "patterns": [{ "include": "#embedded-sql" }]
+    },
+    {
+      "__COMMENT__": "Literals tagged with sql (including generic types), e.g. sql<User>`SELECT ...`.",
+      "name": "string.template.ts",
+      "begin": "\\b((?i)sql|sqlFrag|schema(?-i))<",
+      "end": "(?<=(`|>\\s*[^\\s`]))",
+      "patterns": [
+        { "include": "#embedded-sql" }
+      ]
+    },
+    {
+      "__COMMENT__": "Literals tagged with sql, e.g. sql`SELECT ...`.",
+      "name": "string.template.ts",
+      "begin": "\\b((?i)sql|sqlFrag(?-i))\\s*(?=`)",
+      "end": "(?<=`)",
+      "patterns": [{ "include": "#embedded-sql" }]
+    }
+  ],
+  "repository": {
+    "embedded-sql": {
+      "name": "string.template.ts",
+      "contentName": "meta.embedded.block.sql",
+      "begin": "`",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.string.template.begin.js" }
+      },
+      "end": "`",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.string.template.end.js" }
+      },
+      "patterns": [
+        { "include": "source.ts#template-substitution-element" },
+        { "include": "source.ts#string-character-escape" },
+        { "include": "source.sql" },
+        { "include": "source.plpgsql.postgres" },
+        { "match": "." }
+      ]
+    }
+  }
+}
