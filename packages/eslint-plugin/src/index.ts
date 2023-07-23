@@ -161,7 +161,7 @@ function genRecordShapeCode(
     .join(",\n  ")}
 }>`;
   } catch (e: any) {
-    return `</*${e.message}*/>` as string;
+    return `/*${e.message}*/` as string;
   }
 }
 
@@ -201,16 +201,18 @@ function genQueryShape(
     // need to convert schemaType back to raw relation type(s)
 
     // TODO: indent by original file indentation of surrounding context
-    return `<{
-  ${Object.entries(shape)
-    .map(([key, value]) => {
-      return `${key}: ${value}`;
-    })
-    .join(",\n  ")}
-}>`;
+    if (shape == null) {
+      return `<unknown>`;
+    } else {
+      return `<{
+        ${Object.entries(shape)
+          .map(([key, value]) => {
+            return `${key}: ${value}`;
+          })
+          .join(",\n  ")}
+      }>`;
+    }
   } catch (e: any) {
-    return `</*
-${e.message}
-*/>`;
+    return `/*${e.message}*/`;
   }
 }
