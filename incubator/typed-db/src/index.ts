@@ -8,6 +8,9 @@ import type {
 } from "./types";
 import { schema } from "./types";
 
+// TODO: update to take in the result of the `schema` tag
+// Usage would look like:
+// const sql = createSQL(schema`...`, run);
 function createSQL<TSchema extends Schema>(
   definition: string
 ): SQLTemplate<TSchema, never>;
