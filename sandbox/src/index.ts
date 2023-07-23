@@ -1,19 +1,14 @@
 import { schema } from "@vlcn.io/typed-sql";
 
 const App = schema<{
-  foo: {
-    a: number,
-    b: string | null,
-    c: bigint
-  },
-  bar: {
-    d: number | null,
-    e: number | null
+  cities: {
+    id: number,
+    name: string,
+    lat: number,
+    long: number
   }
-}>`CREATE TABLE foo (a INTEGER NOT NULL, b TEXT, c BIGINT NOT NULL);
-CREATE TABLE bar (d INTEGER, e FLOAT)`;
+}>`CREATE TABLE cities (id INTEGER PRIMARY KEY NOT NULL, name TEXT NOT NULL, lat FLOAT NOT NULL, long FLOAT NOT NULL);`;
 
 const query = App.sql<{
-  a: number,
-  b: string | null
-}>`SELECT a, b FROM foo`
+  count: number
+}>`SELECT count(*) FROM cities`

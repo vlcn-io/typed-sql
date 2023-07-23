@@ -713,6 +713,7 @@ fn fn_call_to_type(fn_name: &String, _args: &Option<Vec<Expr>>) -> ColType {
         || lowered == "changes"
         || lowered == "sign"
         || lowered == "unicode"
+        || lowered == "count"
     {
         builtin_type(BuiltinType::Int)
     } else if lowered == "round" {
@@ -789,6 +790,31 @@ mod tests {
     use crate::ddl;
 
     use super::*;
+
+    #[test]
+    fn sandbox() {
+        let mut parser = Parser::new("SELECT count(*) FROM foo".as_bytes());
+        let ast = parser.next().unwrap();
+        println!("AST: {:?}", ast);
+    }
+
+    #[test]
+    fn select_count() {
+        let schema_shapes = ddl::get_relation_shapes("CREATE TABLE foo (a);".to_string()).unwrap();
+        let schema: HashMap<_, _> = schema_shapes.into_iter().collect();
+        let query_shapes =
+            get_result_shapes("SELECT count(*) FROM foo".to_string(), schema).unwrap();
+        assert_eq!(
+            query_shapes,
+            vec![(
+                None,
+                vec![(
+                    "count".to_string(),
+                    vec![(TypeKind::Builtin, Some(BuiltinType::Int), None)]
+                )]
+            )]
+        )
+    }
 
     #[test]
     fn select_star_single_table_nullable() {
