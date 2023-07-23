@@ -2,7 +2,7 @@
 
 A VS Code extension, which enables SQL syntax highlighting for template literals tagged with an `sql`, `sqlFrag` or `schema` function in JavaScript and TypeScript files.
 
-![Image of code snippet showing SQL syntax highlighting](../docs/preview.png)
+![Image of code snippet showing SQL syntax highlighting](./preview.png)
 
 Supported are:
 
