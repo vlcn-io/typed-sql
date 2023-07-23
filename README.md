@@ -2,6 +2,10 @@
 
 Generates types for your SQL.
 
+ALPHA release. In theory this covers all of SQLite. In practice, I have written very few tests yet so likely there are many bugs.
+
+Documentedissues: https://github.com/vlcn-io/typed-sql/issues
+
 # Installation
 
 Types are generated via an ESLint plugin. You'll need to install and configure this plugin in your workspace. See the [eslint plugin](./packages/eslint-plugin/README.md) package for details.
