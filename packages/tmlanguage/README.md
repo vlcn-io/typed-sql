@@ -11,6 +11,10 @@ Supported are:
   ```ts
   sql`SELECT * FROM user`;
   sqlFrag`WHERE id = ${id}`;
+  schema`
+  CREATE TABLE ...;
+  CREATE TABLE ...;
+  ...`;
   ```
 
 - And combinations with TypeScript features. Some examples:
