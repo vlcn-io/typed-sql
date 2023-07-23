@@ -189,7 +189,7 @@ fn resolve_selection_set_expr_type(
                 }
             }
             Err(Error::Other(format!(
-                "Could not find selected column {} in available relations",
+                "Could not find selected column {} in from clause",
                 name
             )))
         }
@@ -207,7 +207,7 @@ fn resolve_selection_set_expr_type(
                 }
             }
             Err(Error::Other(format!(
-                "Could not find selected column {}.{} in available relations",
+                "Could not find selected column {}.{} in from clause",
                 prefixed, col_name
             )))
         }
@@ -225,7 +225,7 @@ fn resolve_selection_set_expr_type(
                 }
             }
             Err(Error::Other(format!(
-                "Could not find selected column {}.{}.{} in available relations",
+                "Could not find selected column {}.{}.{} in from clause",
                 db_name, table_name, col_name
             )))
         }

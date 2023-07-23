@@ -160,9 +160,8 @@ function genRecordShapeCode(
     })
     .join(",\n  ")}
 }>`;
-  } catch (e) {
-    console.log("some error");
-    return `<${e}>` as string;
+  } catch (e: any) {
+    return `</*${e.message}*/>` as string;
   }
 }
 
@@ -189,23 +188,29 @@ function genQueryShape(
   query = query.replaceAll("`", "");
 
   // TODO: they could have passed many queries...
-  const shapes = parseQueryRelations(
-    getQueryRelations(query, schemaRelations)
-  )[0];
-  // const type = checker.getTypeOfSymbol(schemaType);
-  // const props = type.getProperties();
-  // top level props are records.
-  // prop name is record name
-  // prop type is record type
-  // pack all these into dicts to pass over to type generator
-  // need to convert schemaType back to raw relation type(s)
+  try {
+    const shape = parseQueryRelations(
+      getQueryRelations(query, schemaRelations)
+    )[0];
+    // const type = checker.getTypeOfSymbol(schemaType);
+    // const props = type.getProperties();
+    // top level props are records.
+    // prop name is record name
+    // prop type is record type
+    // pack all these into dicts to pass over to type generator
+    // need to convert schemaType back to raw relation type(s)
 
-  // TODO: indent by original file indentation of surrounding context
-  return `<[{
-  ${Object.entries(shapes)
+    // TODO: indent by original file indentation of surrounding context
+    return `<{
+  ${Object.entries(shape)
     .map(([key, value]) => {
       return `${key}: ${value}`;
     })
     .join(",\n  ")}
-}]>`;
+}>`;
+  } catch (e: any) {
+    return `</*
+${e.message}
+*/>`;
+  }
 }
