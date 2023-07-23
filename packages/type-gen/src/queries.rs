@@ -110,11 +110,12 @@ fn select_to_relation(
     // for naked expression selects, determine type of the expression
     // with_relations act as additional schemas atop our base schema
 
-    // if items in the selection set are expression, convert the expression to a type and pair it with a column name
+    // if items in the selection set are expressions, convert the expression to a type and pair it with a column name
 
     // selection set is picking items out of from, with and schema.
     // then returning a new relation. This relation may be unnamed.
 
+    // TODO: oof. Need a better way to propagate errors from lambdas.
     let mut err: Result<_, Error> = Ok(());
     let cols = selection_set
         .iter()
@@ -130,10 +131,14 @@ fn select_to_relation(
                     }
                 }
                 ResultColumn::Expr(e, None) => {
-                    let mut collector = TokenCollector { parts: vec![] };
-                    e.to_tokens(&mut collector).unwrap(); // TokenCollector always returns Ok
                     match resolve_selection_set_expr_type(e, &from_relations, &schema) {
-                        Ok(t) => vec![(collector.to_string(), t)],
+                        Ok(t) => match expression_to_col_name(e) {
+                            Ok(col_name) => vec![(col_name, t)],
+                            Err(e) => {
+                                err = Err(e);
+                                vec![]
+                            }
+                        },
                         Err(e) => {
                             err = Err(e);
                             vec![]
@@ -171,6 +176,22 @@ fn select_to_relation(
         Err(err)
     } else {
         Ok((None, cols))
+    }
+}
+fn expression_to_col_name(e: &Expr) -> Result<String, Error> {
+    match e {
+        Expr::Name(Name(name))
+        | Expr::Id(Id(name))
+        | Expr::Qualified(_, Name(name))
+        | Expr::DoublyQualified(_, _, Name(name)) => Ok(name.to_string()),
+        _ => {
+            let mut collector = TokenCollector { parts: vec![] };
+            e.to_tokens(&mut collector).unwrap(); // TokenCollector always returns Ok
+            Err(Error::Other(format!(
+                "Please alias (as) the expression used as a column ({}) or use array mode",
+                collector.to_string()
+            )))
+        }
     }
 }
 

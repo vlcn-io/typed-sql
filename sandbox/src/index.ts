@@ -10,5 +10,5 @@ const App = schema<{
 }>`CREATE TABLE cities (id INTEGER PRIMARY KEY NOT NULL, name TEXT NOT NULL, lat FLOAT NOT NULL, long FLOAT NOT NULL);`;
 
 const query = App.sql<{
-  count: number
-}>`SELECT count(*) FROM cities`
+  id: number
+}>`SELECT cities.id FROM cities`
