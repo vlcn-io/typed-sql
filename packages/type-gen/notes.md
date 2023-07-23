@@ -7,7 +7,7 @@ Two parts:
 
 # Schema Gen
 
-Given DDL statements from the template string passed to `declareSchema`, return an AST representation of the types defined by the DDL.
+Given DDL statements from the template string passed to `schema`, return an AST representation of the types defined by the DDL.
 
 E.g.,
 

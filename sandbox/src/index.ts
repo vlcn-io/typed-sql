@@ -1,6 +1,6 @@
-import { declareSchema } from "@vlcn.io/typed-sql";
+import { schema } from "@vlcn.io/typed-sql";
 
-const App = declareSchema<{
+const App = schema<{
   foo: {
     a: number,
     b: string | null,
@@ -13,7 +13,7 @@ const App = declareSchema<{
 }>`CREATE TABLE foo (a INTEGER NOT NULL, b TEXT, c BIGINT NOT NULL);
 CREATE TABLE bar (d INTEGER, e FLOAT)`;
 
-const query = App.sql<[{
+const query = App.sql<{
   a: number,
   b: string | null
-}]>`SELECT a, b FROM foo`
+}>`SELECT a, b FROM foo`

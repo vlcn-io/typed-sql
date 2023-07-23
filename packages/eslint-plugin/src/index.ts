@@ -47,7 +47,7 @@ function visit(
   console.log(tagName);
   if (tagName.endsWith(".sql")) {
     processSqlTemplate(context, sourceFile, node, checker, schemaRelations!);
-  } else if (tagName.endsWith("declareSchema")) {
+  } else if (tagName.endsWith("schema")) {
     schemaRelations = processDeclareSchemaTemplate(
       context,
       sourceFile,

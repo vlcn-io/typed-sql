@@ -2,21 +2,21 @@
 
 The "runtime" component of TypeSQL. This is:
 
-1. A template tag `declareSchema` for defining schemas
+1. A template tag `schema` for defining schemas
 2. A set of TS Utility types for working with the generated types
 
 > Note: intellisense and syntax highlighting within template literals has not yet been built.
 
 # Tags
 
-## declareSchema
+## schema
 
 ```ts
-const MySchema = declareSchema`
+const MySchema = schema`
 CREATE TABLE ...
 CREATE INDEX ...
 ...
-`
+`;
 ```
 
 The codegen plugin picks up on use of this template to define the types for the schema you're working with. Once you've declared your schema, use the `sql` template literal on that schema to generate types for your `SELECT` statements.
@@ -42,7 +42,7 @@ Extracts the generic type of `MySchema` into a top-level type for you to work wi
 E.g.,
 
 ```ts
-const MySchema = declareSchema<..generated..>`
+const MySchema = schema<..generated..>`
 CREATE TABLE foo (a, b);
 CREATE TABLE bar (b, c);
 `;
@@ -72,4 +72,3 @@ function someMethod(input: ResultType<typeof query>) {
 const data = execute(query);
 someMethod(data);
 ```
-
