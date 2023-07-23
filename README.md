@@ -4,7 +4,7 @@ Generates types for your SQL.
 
 ALPHA release. In theory this covers all of SQLite. In practice, I have written very few tests yet so likely there are many bugs.
 
-Documentedissues: https://github.com/vlcn-io/typed-sql/issues
+Documented issues: https://github.com/vlcn-io/typed-sql/issues
 
 # Installation
 
