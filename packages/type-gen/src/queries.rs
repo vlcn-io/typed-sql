@@ -157,7 +157,7 @@ fn select_to_relation(
                     // the chosen table name must exist in from_relations
                     for relation in &from_relations {
                         if let Some(name) = &relation.0 {
-                            if table_name == name {
+                            if &format!("main.{}", table_name) == name {
                                 return relation.1.to_vec();
                             }
                         }

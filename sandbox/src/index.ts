@@ -6,6 +6,11 @@ const App = schema<{
     name: string,
     lat: number,
     long: number
+  },
+  place: {
+    id: number,
+    name: string,
+    city_id: number
   }
 }>`
 CREATE TABLE city (
@@ -13,6 +18,17 @@ CREATE TABLE city (
   name TEXT NOT NULL,
   lat FLOAT NOT NULL,
   long FLOAT NOT NULL
-);`;
+);
+CREATE TABLE place (
+  id INTEGER PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  city_id INTEGER NOT NULL
+)`;
 
-const query = App.sql<unknown>``
+const query = App.sql<{
+  place_name: string,
+  city_name: string | null
+}>`SELECT place.name as place_name, city.name as city_name
+    FROM city
+    RIGHT JOIN place ON place.city_id = city.id 
+    WHERE city.name LIKE '%yo%'`;

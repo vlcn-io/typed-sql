@@ -161,7 +161,9 @@ function genRecordShapeCode(
     .join(",\n  ")}
 }>`;
   } catch (e: any) {
-    return `/*${e.message}*/` as string;
+    return `<{/*
+  ${e.message}
+*/}>` as string;
   }
 }
 
@@ -205,14 +207,16 @@ function genQueryShape(
       return `<unknown>`;
     } else {
       return `<{
-        ${Object.entries(shape)
-          .map(([key, value]) => {
-            return `${key}: ${value}`;
-          })
-          .join(",\n  ")}
-      }>`;
+  ${Object.entries(shape)
+    .map(([key, value]) => {
+      return `${key}: ${value}`;
+    })
+    .join(",\n  ")}
+}>`;
     }
   } catch (e: any) {
-    return `/*${e.message}*/`;
+    return `<{/*
+  ${e.message}
+*/}>`;
   }
 }
