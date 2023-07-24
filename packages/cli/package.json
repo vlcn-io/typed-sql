@@ -1,0 +1,22 @@
+{
+  "name": "@vlcn.io/typed-sql-cli",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "vitest",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@vlcn.io/type-gen-ts-adapter": "workspace:*",
+    "expect": "^29.6.1",
+    "typescript": "^5.1.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.0"
+  }
+}

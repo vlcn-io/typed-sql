@@ -10,6 +10,7 @@
     { "path": "../incubator/typed-db" },
     { "path": "../packages/eslint-plugin" },
     { "path": "../sandbox" },
+    { "path": "../packages/cli" }
     // { "path": "../packages/type-gen-ts-adapter" }
   ]
 }
