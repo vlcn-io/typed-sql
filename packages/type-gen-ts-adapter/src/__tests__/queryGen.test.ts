@@ -56,8 +56,13 @@ test("queries", () => {
       "inner join",
       schema1,
       `SELECT t1.x, t2.y FROM baz as t1, baz as t2`,
-      [{ "t1 x": "bigint", "t2 y": "string" }],
-      // ^-- todo: qualifiers should not be in the name
+      [{ x: "bigint", y: "string" }],
+    ],
+    [
+      "left join",
+      schema1,
+      `SELECT baz.x, foo.a FROM foo LEFT JOIN baz ON foo.a = baz.x`,
+      [{ x: "bigint | null", a: "string | null" }],
     ],
   ] as const;
   runTests(cases);
@@ -69,6 +74,6 @@ function runTests(
   for (const [description, schema, query, expected] of cases) {
     const shapes = parseQueryRelations(getQueryRelations(query, schema));
     // console.log(shapes);
-    expect(shapes).toEqual(expected);
+    expect(shapes, description).toEqual(expected);
   }
 }
