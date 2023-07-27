@@ -13,6 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "@vlcn.io/type-gen-ts-adapter": "workspace:*",
+    "commander": "^11.0.0",
     "expect": "^29.6.1",
     "typescript": "^5.1.6"
   },

@@ -25,12 +25,10 @@ CREATE TABLE place (
   city_id INTEGER NOT NULL
 )`;
 
-
-
 const query = App.sql<{
-  place_name: string,
-  city_name: string
-}>`SELECT place.name as place_name, city.name as city_name
-    FROM city
-    JOIN place ON place.city_id = city.id 
-    WHERE city.name LIKE '%yo%'`;
+  city_id: number,
+  place_name: string
+}>`SELECT city.id as city_id, place.name as place_name 
+  FROM city JOIN place`;
+
+
