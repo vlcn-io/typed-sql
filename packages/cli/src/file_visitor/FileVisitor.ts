@@ -45,24 +45,42 @@ export default class FileVisitor {
     private sourceFile: ts.SourceFile
   ) {}
 
-  visit(checker: ts.TypeChecker) {
+  visitAll(checker: ts.TypeChecker) {
     this.dag.orphan(this.sourceFile.fileName);
 
-    this.collectNodes(this.sourceFile, checker);
+    this.collectAllNodes(this.sourceFile, checker);
     const schemaTypeBuilder = new SchemaTypeBuilder(
       this.schemaCache,
-      this.dag,
       this.sourceFile
     );
     const schemaFixes = schemaTypeBuilder.buildResidentTypes(
       this.schemaTemplates
     );
     const queryFixes = new QueryTypeBuilder(
-      schemaTypeBuilder,
+      this.dag,
       this.sourceFile
     ).buildQueryTypes(this.sqlTemplates, checker);
 
     this.applyFixes(schemaFixes.concat(queryFixes));
+  }
+
+  visitSchemaDefs(checker: ts.TypeChecker) {
+    this.collectSchemaNodes(this.sourceFile, checker);
+    const schemaFixes = new SchemaTypeBuilder(
+      this.schemaCache,
+      this.sourceFile
+    ).buildResidentTypes(this.schemaTemplates);
+
+    this.applyFixes(schemaFixes);
+  }
+
+  visitQueryDefs(checker: ts.TypeChecker) {
+    const queryFixes = new QueryTypeBuilder(
+      this.dag,
+      this.sourceFile
+    ).buildQueryTypes(this.sqlTemplates, checker);
+
+    this.applyFixes(queryFixes);
   }
 
   applyFixes(fixes: Fix[]) {
@@ -71,9 +89,9 @@ export default class FileVisitor {
     // We should also apply all fixes to the in-memory representation of the file then, after all are applied, serialize.
   }
 
-  collectNodes(node: ts.Node, checker: ts.TypeChecker) {
+  collectAllNodes(node: ts.Node, checker: ts.TypeChecker) {
     if (!ts.isTaggedTemplateExpression(node)) {
-      ts.forEachChild(node, (node) => this.collectNodes(node, checker));
+      ts.forEachChild(node, (node) => this.collectAllNodes(node, checker));
       return;
     }
 
@@ -82,6 +100,30 @@ export default class FileVisitor {
       this.sqlTemplates.push(node);
     } else if (tagName.endsWith("schema")) {
       this.schemaTemplates.push(node);
+    }
+  }
+
+  collectSchemaNodes(node: ts.Node, checker: ts.TypeChecker) {
+    if (!ts.isTaggedTemplateExpression(node)) {
+      ts.forEachChild(node, (node) => this.collectSchemaNodes(node, checker));
+      return;
+    }
+
+    const tagName = node.tag.getText();
+    if (tagName.endsWith("schema")) {
+      this.schemaTemplates.push(node);
+    }
+  }
+
+  collectQueryNodes(node: ts.Node, checker: ts.TypeChecker) {
+    if (!ts.isTaggedTemplateExpression(node)) {
+      ts.forEachChild(node, (node) => this.collectQueryNodes(node, checker));
+      return;
+    }
+
+    const tagName = node.tag.getText();
+    if (tagName.endsWith(".sql")) {
+      this.sqlTemplates.push(node);
     }
   }
 }

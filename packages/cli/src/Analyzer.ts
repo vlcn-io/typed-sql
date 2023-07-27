@@ -61,8 +61,14 @@ export default class Analyzer {
         // If we run into issues we can use `ts-patch` and do this as a proper transformer.
         // Then apply collected fixes.
         for (const file of program.getSourceFiles()) {
-          console.log(file.fileName);
-          new FileVisitor(this.schemaCache, this.dag, file).visit(checker);
+          new FileVisitor(this.schemaCache, this.dag, file).visitSchemaDefs(
+            checker
+          );
+        }
+        for (const file of program.getSourceFiles()) {
+          new FileVisitor(this.schemaCache, this.dag, file).visitQueryDefs(
+            checker
+          );
         }
         isCold = false;
       } else {
@@ -74,7 +80,7 @@ export default class Analyzer {
         ) {
           const affectedFile = affected.affected as ts.SourceFile;
           console.log("Affected: " + affectedFile?.getSourceFile()?.fileName);
-          new FileVisitor(this.schemaCache, this.dag, affectedFile).visit(
+          new FileVisitor(this.schemaCache, this.dag, affectedFile).visitAll(
             checker
           );
           // no consult the dag for anyone who depends on this file and analyze them too.

@@ -13,56 +13,8 @@ import { Fix } from "./types.js";
 export default class SchemaTypeBuilder {
   constructor(
     private schemaCache: SchemaCache,
-    private dag: DependencyGraph,
     private sourceFile: ts.SourceFile
   ) {}
-
-  /**
-   * Given a declaration, returns the type if it already exists in the cache.
-   * Builds it and caches it if it does not.
-   *
-   * Does no file operations.
-   */
-  getOrBuildRelationsFromDeclaration(
-    schemaNode: ts.Node,
-    checker: ts.TypeChecker
-  ): ReturnType<typeof getDdlRelations> {
-    const schemaNodeSymbol = checker.getSymbolAtLocation(schemaNode);
-    const otherDecl = schemaNodeSymbol?.declarations;
-    const decl = schemaNodeSymbol?.valueDeclaration;
-    if (!decl) {
-      if (!otherDecl) {
-        throw new Error("Missing other decl too!");
-      }
-      // console.log(schemaNodeSymbol.escapedName);
-      // console.log(schemaNodeSymbol.getName());
-      // console.log(schemaNodeSymbol.name);
-      // console.log(otherDecl[0].getSourceFile().fileName);
-      // console.log(otherDecl.length);
-      // throw new Error("Missing decl");
-      return [];
-    }
-
-    // the declaration is in another file. That means the current file depends on that one.
-    if (decl.getSourceFile().fileName != this.sourceFile.fileName) {
-      this.dag.addDependent(
-        decl.getSourceFile().fileName,
-        this.sourceFile.fileName
-      );
-    }
-
-    // this is the correct source file containing schema!
-    // console.log(decl.getSourceFile().fileName);
-    // console.log(decl.getFullText());
-
-    // if the file has already been visited then we'll already have the required relations.
-    // what is the cache key for those relations though???
-    // fileName + declaration site?
-
-    // if the file has not been visited we must eagerly visit it from this visitor.
-
-    return [];
-  }
 
   /**
    * Builds all of the types for the schemas that are resident to the current
