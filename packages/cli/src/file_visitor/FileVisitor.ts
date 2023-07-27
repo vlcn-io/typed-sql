@@ -87,6 +87,10 @@ export default class FileVisitor {
   }
 
   applyFixes(fixes: Fix[]) {
+    if (fixes.length == 0) {
+      return;
+    }
+    console.log(fixes);
     // each fix will shift the locations for all future fixes.
     // so we need to return fixes up the stack.
     // We should also apply all fixes to the in-memory representation of the file then, after all are applied, serialize.

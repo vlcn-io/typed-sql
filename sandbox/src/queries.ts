@@ -7,3 +7,5 @@ LocApp.sql<{
   lat: number,
   long: number
 }>`SELECT * FROM city`;
+
+
