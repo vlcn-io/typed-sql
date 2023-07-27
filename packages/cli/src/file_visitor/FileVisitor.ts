@@ -31,6 +31,8 @@ import SchemaTypeBuilder from "./SchemaTypeBuilder.js";
 import DependencyGraph from "../DependencyGraph.js";
 import QueryTypeBuilder from "./QueryTypeBuilder.js";
 import { Fix } from "./types.js";
+import { replaceRange } from "../util.js";
+import fs from "fs";
 
 /**
  * The file visitor is ephemeral. Created each time we visit a file.
@@ -90,10 +92,16 @@ export default class FileVisitor {
     if (fixes.length == 0) {
       return;
     }
-    console.log(fixes);
-    // each fix will shift the locations for all future fixes.
-    // so we need to return fixes up the stack.
-    // We should also apply all fixes to the in-memory representation of the file then, after all are applied, serialize.
+    let offset = 0;
+    for (const [range, replacement] of fixes) {
+      const text = this.sourceFile.getFullText();
+      const updatedText = replaceRange(text, range[0], range[1], replacement);
+
+      // if replacement is _longer_ than what was replaced then all other replacements shift further away
+      // if replacement is _shorter_ then they shift closer
+      offset += replacement.length - (range[1] - range[0]);
+      fs.writeFileSync(this.sourceFile.fileName, updatedText);
+    }
   }
 
   collectAllNodes(node: ts.Node, checker: ts.TypeChecker) {

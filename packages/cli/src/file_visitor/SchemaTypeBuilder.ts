@@ -56,22 +56,26 @@ export default class SchemaTypeBuilder {
       if (maybeExistingNode != templateStringNode) {
         existingContent = normalize(`<${maybeExistingNode.getText()}>`);
       }
-      const schemaRelations = getDdlRelations(
-        trimTag(templateStringNode.getText())
-      );
+      try {
+        const schemaRelations = getDdlRelations(
+          trimTag(templateStringNode.getText())
+        );
 
-      this.schemaCache.cache(
-        file.fileName,
-        schemaAccessNode.getEnd() + 1,
-        schemaRelations
-      );
+        this.schemaCache.cache(
+          file.fileName,
+          schemaAccessNode.getEnd() + 1,
+          schemaRelations
+        );
 
-      const replacement = this.genRecordShapeCode(schemaRelations);
-      if (existingContent == normalize(replacement)) {
-        return null;
+        const replacement = this.genRecordShapeCode(schemaRelations);
+        if (existingContent == normalize(replacement)) {
+          return null;
+        }
+        // const pos = this.sourceFile.getLineAndCharacterOfPosition(range[0]);
+        return [range, replacement];
+      } catch (e: any) {
+        return [range, `<{/*${e}*/}>`];
       }
-      // const pos = this.sourceFile.getLineAndCharacterOfPosition(range[0]);
-      return [range, replacement];
     }
 
     throw new Error(
