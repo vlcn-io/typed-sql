@@ -24,7 +24,7 @@ Changing a schema definition should cause types for all queries using that schem
 
 Given all of this, you **must** define your schemas and queries all in a single file. This will be fixed before a production ready release.
 
-See [issue 7](https://github.com/vlcn-io/typed-sql/issues/7)
+See [issue 7](https://github.com/vlcn-io/typed-sql/issues/7) & incoming fix: https://github.com/vlcn-io/typed-sql/pull/23
 
 ## Composition
 
