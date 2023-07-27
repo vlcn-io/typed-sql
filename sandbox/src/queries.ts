@@ -1,5 +1,6 @@
-import {LocApp} from './schemas.js';
-
+import { LocApp } from './schemas.js';
+ 
+// wtf
 LocApp.sql<{
   id: number,
   name: string,

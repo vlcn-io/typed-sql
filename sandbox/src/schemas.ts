@@ -9,3 +9,5 @@ export const LocApp = schema<{
   id INTEGER PRIMARY KEY NOT NULL,
   name TEXT NOT NULL
 );`;
+
+

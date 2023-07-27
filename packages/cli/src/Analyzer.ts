@@ -49,25 +49,38 @@ export default class Analyzer {
       }
     );
 
+    let isCold = true;
     host.afterProgramCreate = (program) => {
       console.log("prog create");
       const checker = program.getProgram().getTypeChecker();
-      const visited = new Set<string>();
-      const dependents = new Set<string>();
-      // TODO: is this incremental? Or we need `affectedFile` some such?
-      for (const file of program.getSourceFiles()) {
-        if (visited.has(file.fileName)) {
-          continue;
-        }
-        visited.add(file.fileName);
-        new FileVisitor(this.schemaCache, this.dag, file).visit(checker);
-        // pull things that depend on `file` from the `dag` and visit those too if they've not been visited!
-      }
-      // const affectedFile = program.getSemanticDiagnosticsOfNextAffectedFile?.()?.affected;
 
-      // if (affectedFile) {
-      //   analyzeFile(affectedFile as any, checker);
-      // }
+      if (isCold) {
+        // process the entire repo.
+        // First for schema defs (& apply fixes so presumably we're atomic?)
+        // Then for query defs (& apply those fixes? will ts have re-read things? what if someone edits while we're updating?)
+        // If we run into issues we can use `ts-patch` and do this as a proper transformer.
+        // Then apply collected fixes.
+        for (const file of program.getSourceFiles()) {
+          console.log(file.fileName);
+          new FileVisitor(this.schemaCache, this.dag, file).visit(checker);
+        }
+        isCold = false;
+      } else {
+        let affected:
+          | ts.AffectedFileResult<readonly ts.Diagnostic[]>
+          | undefined;
+        while (
+          (affected = program.getSemanticDiagnosticsOfNextAffectedFile())
+        ) {
+          const affectedFile = affected.affected as ts.SourceFile;
+          console.log("Affected: " + affectedFile?.getSourceFile()?.fileName);
+          new FileVisitor(this.schemaCache, this.dag, affectedFile).visit(
+            checker
+          );
+          // no consult the dag for anyone who depends on this file and analyze them too.
+          // we can use `program.getSourceFile` or whatever to do this.
+        }
+      }
     };
 
     ts.createWatchProgram(host);
