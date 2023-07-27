@@ -49,34 +49,11 @@ export default class Analyzer {
     host.afterProgramCreate = (program) => {
       console.log("prog create");
       const checker = program.getProgram().getTypeChecker();
-      const seen = new Set<string>();
+      const visited = new Set<string>();
       for (const file of program.getSourceFiles()) {
-        if (seen.has(file.fileName)) {
-          continue;
-        }
-        this.visit(file, checker);
-        // pull things that depend on `file` from the `dag` and visit those too
-        // if they have not already been visited.
-        // well if they've already been visited then the base file was visited too through them...
-        // so when we hit file, we should check the dag to see if anything that uses file was already visited
-        // if so we can skip file b/c it was done in the recursive file visit step.
-        // but we still must visit all the users of the file, even if we do not visit the file itself.
-        // so:
-        // - get file
-        // - check if seen has it, if so skip
-        // - get all files that depend on file from DAG
-        // - seen if any of those are in seen. If so, do not process current file
-        // - for the rest of the dependents no in the DAG, visit them
-        // - add them all to seen
-        // - continue
-        // log in our schema cache if we keep re-visiting the same schema file.
-        // hmm...
-        // Maybe file visitor should instead return a list of unresolved dependencies and the file itself.
-        // As this list builds up,
-        // we visit all the unresolved dependencies.
-        // once all depenencies are resolved, we visit the dependents.
-        // this prevents re-processing the same file over and manages the DAG with the function call stack
-        seen.add(file.fileName);
+        new FileVisitor(this.schemaCache, file, visited).visit(checker);
+        // pull things that depend on `file` from the `dag` and visit those too!
+        // the file visitor will ignore them if they were already visited.
       }
       // const affectedFile = program.getSemanticDiagnosticsOfNextAffectedFile?.()?.affected;
 
@@ -86,9 +63,5 @@ export default class Analyzer {
     };
 
     ts.createWatchProgram(host);
-  }
-
-  private visit(sourceFile: ts.SourceFile, checker: ts.TypeChecker) {
-    new FileVisitor(this.schemaCache, sourceFile).visit(checker);
   }
 }

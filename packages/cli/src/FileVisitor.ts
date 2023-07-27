@@ -42,10 +42,15 @@ export default class FileVisitor {
 
   constructor(
     private schemaCache: SchemaCache,
-    private sourceFile: ts.SourceFile
+    private sourceFile: ts.SourceFile,
+    private visited: Set<string>
   ) {}
 
   visit(checker: ts.TypeChecker) {
+    if (this.visited.has(this.sourceFile.fileName)) {
+      return;
+    }
+    this.visited.add(this.sourceFile.fileName);
     this.visitRecursive(this.sourceFile, checker);
 
     for (const schema of this.schemaTemplates) {
@@ -113,6 +118,8 @@ export default class FileVisitor {
     node: ts.TaggedTemplateExpression,
     checker: ts.TypeChecker
   ) {
+    // TODO: if we depend on something not yet visited, get the source file of that thing and spawn a new visitor to visit it!
+    // we also need to add a DAG entry for these cases.
     const children = getChildren(node);
     const templateStringNode = children[children.length - 1];
     const schemaAccessNode = children[0];
