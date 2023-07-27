@@ -4,11 +4,11 @@ import {
   getQueryRelations,
   parseQueryRelations,
 } from "@vlcn.io/type-gen-ts-adapter";
-import { getChildren, trimTag } from "../util.js";
-import { normalize } from "path";
+import { getChildren, normalize, trimTag } from "../util.js";
 import ts from "typescript";
 import SchemaCache from "../SchemaCache.js";
 import DependencyGraph from "../DependencyGraph.js";
+import { Fix } from "./types.js";
 
 export default class SchemaTypeBuilder {
   constructor(
@@ -23,11 +23,32 @@ export default class SchemaTypeBuilder {
    *
    * Does no file operations.
    */
-  getOrBuildRelationsFromDeclaration() {
-    // here we can add a link in the dag if the declaration is not defined in this file.
-    // if (decl not in this_file) {
-    //   this.dag.addDependent(decl, this_file);
-    // }
+  getOrBuildRelationsFromDeclaration(
+    schemaNode: ts.Node,
+    checker: ts.TypeChecker
+  ): ReturnType<typeof getDdlRelations> {
+    const schemaNodeSymbol = checker.getSymbolAtLocation(schemaNode);
+    const decl = schemaNodeSymbol?.valueDeclaration!;
+
+    // the declaration is in another file. That means the current file depends on that one.
+    if (decl.getSourceFile().fileName != this.sourceFile.fileName) {
+      this.dag.addDependent(
+        decl.getSourceFile().fileName,
+        this.sourceFile.fileName
+      );
+    }
+
+    // this is the correct source file containing schema!
+    console.log(decl.getSourceFile().fileName);
+    console.log(decl.getFullText());
+
+    // if the file has already been visited then we'll already have the required relations.
+    // what is the cache key for those relations though???
+    // fileName + declaration site?
+
+    // if the file has not been visited we must eagerly visit it from this visitor.
+
+    return [];
   }
 
   /**
@@ -38,15 +59,25 @@ export default class SchemaTypeBuilder {
    *
    * Will reun the replace against the file.
    */
-  buildResidentTypes(schemaDefinitions: ts.TaggedTemplateExpression[]): this {
+  buildResidentTypes(schemaDefinitions: ts.TaggedTemplateExpression[]) {
     this.schemaCache.clearForFile(this.sourceFile.fileName);
-    return this;
+    const fixes = [];
+
+    // process templates
+    for (const def of schemaDefinitions) {
+      const maybeFix = this.processDeclareSchemaTemplate(this.sourceFile, def);
+      if (maybeFix) {
+        fixes.push(maybeFix);
+      }
+    }
+
+    return fixes;
   }
 
   private processDeclareSchemaTemplate(
-    node: ts.TaggedTemplateExpression,
-    checker: ts.TypeChecker
-  ): ReturnType<typeof getDdlRelations> {
+    file: ts.SourceFile,
+    node: ts.TaggedTemplateExpression
+  ): Fix | null {
     const children = getChildren(node);
     const templateStringNode = children[children.length - 1];
     const maybeExistingNode = children[1];
@@ -63,23 +94,24 @@ export default class SchemaTypeBuilder {
       const schemaRelations = getDdlRelations(
         trimTag(templateStringNode.getText())
       );
-      // this.schemaCache.put();
+
+      this.schemaCache.cache(
+        file.fileName,
+        templateStringNode.getText(),
+        schemaRelations
+      );
+
       const replacement = this.genRecordShapeCode(schemaRelations);
       if (existingContent == normalize(replacement)) {
-        return schemaRelations;
+        return null;
       }
-      const pos = this.sourceFile.getLineAndCharacterOfPosition(range[0]);
-      // TODO: replace!
-      // context.report({
-      //   message: `content does not match: ${replacement}`,
-      //   loc: { line: pos.line, column: pos.character },
-      //   fix: (fixer) => fixer.replaceTextRange(range, replacement),
-      // });
-
-      return schemaRelations;
+      // const pos = this.sourceFile.getLineAndCharacterOfPosition(range[0]);
+      return [range, replacement];
     }
 
-    return [];
+    throw new Error(
+      `Unexpected AST node kind: ${templateStringNode.kind}. This should have been a template literal defining a schema.`
+    );
   }
 
   // TODO: take in original indentation offset
@@ -106,24 +138,5 @@ export default class SchemaTypeBuilder {
   ${e.message}
 */}>` as string;
     }
-  }
-
-  private getSchemaRelationsForQueryDependency(
-    schemaNode: ts.Node,
-    checker: ts.TypeChecker
-  ): ReturnType<typeof getDdlRelations> {
-    const schemaNodeSymbol = checker.getSymbolAtLocation(schemaNode);
-    const decl = schemaNodeSymbol?.valueDeclaration;
-    // this is the correct source file containing schema!
-    console.log(decl!.getSourceFile().fileName);
-    console.log(decl?.getFullText());
-
-    // if the file has already been visited then we'll already have the required relations.
-    // what is the cache key for those relations though???
-    // fileName + declaration site?
-
-    // if the file has not been visited we must eagerly visit it from this visitor.
-
-    return [];
   }
 }
