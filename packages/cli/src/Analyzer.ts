@@ -83,6 +83,16 @@ export default class Analyzer {
           new FileVisitor(this.schemaCache, this.dag, affectedFile).visitAll(
             checker
           );
+          const children = this.dag.getDependents(affectedFile.fileName);
+          console.log(children);
+          for (const child of children) {
+            const childFile = program.getSourceFile(child);
+            // schemas can't rely on schemas so this should be fine.
+            // well.. they could if you allow select statements in schemas that select from attached databases 🤣
+            new FileVisitor(this.schemaCache, this.dag, childFile!).visitAll(
+              checker
+            );
+          }
           // no consult the dag for anyone who depends on this file and analyze them too.
           // we can use `program.getSourceFile` or whatever to do this.
         }
