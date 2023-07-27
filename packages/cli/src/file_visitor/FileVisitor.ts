@@ -30,40 +30,44 @@ import {
   getQueryRelations,
   parseQueryRelations,
 } from "@vlcn.io/type-gen-ts-adapter";
-import { getChildren, trimTag } from "./util.js";
+import { getChildren, trimTag } from "../util.js";
 import { normalize } from "path";
-import SchemaCache from "./SchemaCache.js";
+import SchemaCache from "../SchemaCache.js";
 
 import ts from "typescript";
+import SchemaTypeBuilder from "./SchemaTypeBuilder.js";
+import DependencyGraph from "../DependencyGraph.js";
 
+/**
+ * The file visitor is ephemeral. Created each time we visit a file.
+ */
 export default class FileVisitor {
   private sqlTemplates: ts.TaggedTemplateExpression[] = [];
   private schemaTemplates: ts.TaggedTemplateExpression[] = [];
 
   constructor(
     private schemaCache: SchemaCache,
-    private sourceFile: ts.SourceFile,
-    private visited: Set<string>
+    private dag: DependencyGraph,
+    private sourceFile: ts.SourceFile
   ) {}
 
   visit(checker: ts.TypeChecker) {
-    if (this.visited.has(this.sourceFile.fileName)) {
-      return;
-    }
-    this.visited.add(this.sourceFile.fileName);
-    this.visitRecursive(this.sourceFile, checker);
+    this.collectNodes(this.sourceFile, checker);
 
-    for (const schema of this.schemaTemplates) {
-      this.processDeclareSchemaTemplate(schema, checker);
-    }
+    this.dag.orphan(this.sourceFile.fileName);
+    const schemaTypeBuilder = new SchemaTypeBuilder(
+      this.schemaCache,
+      this.dag,
+      this.sourceFile
+    ).buildResidentTypes(this.schemaTemplates);
     for (const sql of this.sqlTemplates) {
       this.processSqlTemplate(sql, checker);
     }
   }
 
-  visitRecursive(node: ts.Node, checker: ts.TypeChecker) {
+  collectNodes(node: ts.Node, checker: ts.TypeChecker) {
     if (!ts.isTaggedTemplateExpression(node)) {
-      ts.forEachChild(node, (node) => this.visitRecursive(node, checker));
+      ts.forEachChild(node, (node) => this.collectNodes(node, checker));
       return;
     }
 
@@ -95,8 +99,8 @@ export default class FileVisitor {
       const schemaRelations = getDdlRelations(
         trimTag(templateStringNode.getText())
       );
-      const replacement = this.genRecordShapeCode(schemaRelations);
       // this.schemaCache.put();
+      const replacement = this.genRecordShapeCode(schemaRelations);
       if (existingContent == normalize(replacement)) {
         return schemaRelations;
       }
@@ -124,15 +128,10 @@ export default class FileVisitor {
     const templateStringNode = children[children.length - 1];
     const schemaAccessNode = children[0];
     const schemaNode = getChildren(schemaAccessNode)[0];
-    const schemaNodeSymbol = checker.getSymbolAtLocation(schemaNode);
-    const decl = schemaNodeSymbol?.valueDeclaration;
-    if (decl) {
-      // this is the correct source file containing schema!
-      console.log(decl.getSourceFile().fileName);
-      // so based on file name we should be able to do
-      // a "schema only" pass of the file
-      // to pull and cache schema definitions
-    }
+    const schemaRelations = this.getSchemaRelationsForQueryDependency(
+      schemaNode,
+      checker
+    );
     // range of text to replace. Inclusive of `<` and `>` if they exist.
     const range: [number, number] = [
       schemaAccessNode.getEnd(),
@@ -146,9 +145,8 @@ export default class FileVisitor {
         existingContent = normalize(`<${maybeExistingNode.getText()}>`);
       }
       const replacement = this.genQueryShape(
-        checker,
-        decl!,
-        templateStringNode.getText()
+        templateStringNode.getText(),
+        schemaRelations
       );
       if (existingContent == normalize(replacement)) {
         return;
@@ -161,6 +159,25 @@ export default class FileVisitor {
       //   fix: (fixer) => fixer.replaceTextRange(range, replacement),
       // });
     }
+  }
+
+  private getSchemaRelationsForQueryDependency(
+    schemaNode: ts.Node,
+    checker: ts.TypeChecker
+  ): ReturnType<typeof getDdlRelations> {
+    const schemaNodeSymbol = checker.getSymbolAtLocation(schemaNode);
+    const decl = schemaNodeSymbol?.valueDeclaration;
+    // this is the correct source file containing schema!
+    console.log(decl!.getSourceFile().fileName);
+    console.log(decl?.getFullText());
+
+    // if the file has already been visited then we'll already have the required relations.
+    // what is the cache key for those relations though???
+    // fileName + declaration site?
+
+    // if the file has not been visited we must eagerly visit it from this visitor.
+
+    return [];
   }
 
   // TODO: take in original indentation offset
@@ -204,18 +221,13 @@ export default class FileVisitor {
   }
 
   private genQueryShape(
-    checker: ts.TypeChecker,
-    schemaNodeDecl: ts.Declaration,
-    query: string
+    query: string,
+    schemaRelations: ReturnType<typeof getDdlRelations>
   ) {
     query = trimTag(query);
 
     // TODO: they could have passed many queries...
     try {
-      let schemaRelations = this.schemaCache.getByType(checker, schemaType);
-      if (schemaRelations == null) {
-        schemaRelations = this.eagerlyProcessSchema(checker, schemaType);
-      }
       const shape = parseQueryRelations(
         getQueryRelations(query, schemaRelations)
       )[0];
