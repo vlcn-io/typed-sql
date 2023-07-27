@@ -17,9 +17,13 @@
  */
 
 import { getDdlRelations } from "@vlcn.io/type-gen-ts-adapter";
-import ts from "typescript";
+import crypto from "crypto";
 
 export default class SchemaCache {
+  private map = new Map<
+    string,
+    Map<string, ReturnType<typeof getDdlRelations>>
+  >();
   // cache on file name + schema content hash.
   // we can actually get the schema declaration in its entirity from a query site.
   // this means we don't have to do weir visitation of other files.
@@ -27,13 +31,37 @@ export default class SchemaCache {
   // fill in all schemas afterwards.
   getByHash(
     fileName: string,
-    schemaHash: string
+    schemaText: string
   ): ReturnType<typeof getDdlRelations> | null {
-    return null;
+    const existing = this.map.get(fileName);
+    if (!existing) {
+      return null;
+    }
+    return existing.get(hash(schemaText)) || null;
+  }
+
+  cache(
+    fileName: string,
+    schemaText: string,
+    schema: ReturnType<typeof getDdlRelations>
+  ) {
+    let existing = this.map.get(fileName);
+    if (existing == null) {
+      existing = new Map();
+      this.map.set(fileName, existing);
+    }
+    existing.set(hash(schemaText), schema);
   }
 
   clearForFile(fileName: string) {
     // this'll be called whenever we do a full re-process of a specific file since that file will end up
     // building all the relations it declares.
+    this.map.delete(fileName);
   }
+}
+
+function hash(s: string): string {
+  const shasum = crypto.createHash("sha1");
+  shasum.update(s);
+  return shasum.digest("hex");
 }

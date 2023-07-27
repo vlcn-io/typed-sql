@@ -8,8 +8,9 @@ export function getChildren(node: ts.Node): ts.Node[] {
   return ret;
 }
 
+// TODO: test to ensure all forms of sapcing are caught.
 export function normalize(val: string) {
-  return val.trim().replace(/\s/g, " ").replace(/,|;/g, "");
+  return val.replace(/\s/g, " ").replace(/,|;/g, "");
 }
 
 export function trimTag(tag: string) {

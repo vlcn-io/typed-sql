@@ -3,10 +3,10 @@ import {
   getQueryRelations,
   parseQueryRelations,
 } from "@vlcn.io/type-gen-ts-adapter";
-import { getChildren, trimTag } from "../util.js";
-import { normalize } from "path";
+import { getChildren, normalize, trimTag } from "../util.js";
 import ts from "typescript";
 import SchemaTypeBuilder from "./SchemaTypeBuilder.js";
+import { Fix } from "./types.js";
 
 export default class QueryTypeBuilder {
   constructor(
@@ -17,22 +17,33 @@ export default class QueryTypeBuilder {
   buildQueryTypes(
     queries: ts.TaggedTemplateExpression[],
     checker: ts.TypeChecker
-  ) {}
+  ) {
+    const fixes = [];
+    for (const query of queries) {
+      const fix = this.processSqlTemplate(query, checker);
+      if (fix != null) {
+        fixes.push(fix);
+      }
+    }
+
+    return fixes;
+  }
 
   private processSqlTemplate(
     node: ts.TaggedTemplateExpression,
     checker: ts.TypeChecker
-  ) {
+  ): Fix | null {
     // TODO: if we depend on something not yet visited, get the source file of that thing and spawn a new visitor to visit it!
     // we also need to add a DAG entry for these cases.
     const children = getChildren(node);
     const templateStringNode = children[children.length - 1];
     const schemaAccessNode = children[0];
     const schemaNode = getChildren(schemaAccessNode)[0];
-    const schemaRelations = this.getSchemaRelationsForQueryDependency(
-      schemaNode,
-      checker
-    );
+    const schemaRelations =
+      this.schemaTypeBuilder.getOrBuildRelationsFromDeclaration(
+        schemaNode,
+        checker
+      );
     // range of text to replace. Inclusive of `<` and `>` if they exist.
     const range: [number, number] = [
       schemaAccessNode.getEnd(),
@@ -50,16 +61,15 @@ export default class QueryTypeBuilder {
         schemaRelations
       );
       if (existingContent == normalize(replacement)) {
-        return;
+        return null;
       }
-      const pos = this.sourceFile.getLineAndCharacterOfPosition(range[0]);
-      // TODO: replace!
-      // context.report({
-      //   message: `content does not match: ${replacement}`,
-      //   loc: { line: pos.line, column: pos.character },
-      //   fix: (fixer) => fixer.replaceTextRange(range, replacement),
-      // });
+      // const pos = this.sourceFile.getLineAndCharacterOfPosition(range[0]);
+      return [range, replacement];
     }
+
+    throw new Error(
+      `Got an unexpected kind of node: ${templateStringNode.kind}. Was expecting a sql template string.`
+    );
   }
 
   private genQueryShape(

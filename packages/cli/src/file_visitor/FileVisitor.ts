@@ -30,6 +30,7 @@ import ts from "typescript";
 import SchemaTypeBuilder from "./SchemaTypeBuilder.js";
 import DependencyGraph from "../DependencyGraph.js";
 import QueryTypeBuilder from "./QueryTypeBuilder.js";
+import { Fix } from "./types.js";
 
 /**
  * The file visitor is ephemeral. Created each time we visit a file.
@@ -52,11 +53,22 @@ export default class FileVisitor {
       this.schemaCache,
       this.dag,
       this.sourceFile
-    ).buildResidentTypes(this.schemaTemplates);
-    new QueryTypeBuilder(schemaTypeBuilder, this.sourceFile).buildQueryTypes(
-      this.sqlTemplates,
-      checker
     );
+    const schemaFixes = schemaTypeBuilder.buildResidentTypes(
+      this.schemaTemplates
+    );
+    const queryFixes = new QueryTypeBuilder(
+      schemaTypeBuilder,
+      this.sourceFile
+    ).buildQueryTypes(this.sqlTemplates, checker);
+
+    this.applyFixes(schemaFixes.concat(queryFixes));
+  }
+
+  applyFixes(fixes: Fix[]) {
+    // each fix will shift the locations for all future fixes.
+    // so we need to return fixes up the stack.
+    // We should also apply all fixes to the in-memory representation of the file then, after all are applied, serialize.
   }
 
   collectNodes(node: ts.Node, checker: ts.TypeChecker) {
