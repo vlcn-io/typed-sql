@@ -7,10 +7,11 @@ import { getChildren, normalize, trimTag } from "../util.js";
 import ts from "typescript";
 import SchemaTypeBuilder from "./SchemaTypeBuilder.js";
 import { Fix } from "./types.js";
+import DependencyGraph from "../DependencyGraph.js";
 
 export default class QueryTypeBuilder {
   constructor(
-    private schemaTypeBuilder: SchemaTypeBuilder,
+    private dag: DependencyGraph,
     private sourceFile: ts.SourceFile
   ) {}
 
@@ -33,17 +34,11 @@ export default class QueryTypeBuilder {
     node: ts.TaggedTemplateExpression,
     checker: ts.TypeChecker
   ): Fix | null {
-    // TODO: if we depend on something not yet visited, get the source file of that thing and spawn a new visitor to visit it!
-    // we also need to add a DAG entry for these cases.
     const children = getChildren(node);
     const templateStringNode = children[children.length - 1];
     const schemaAccessNode = children[0];
     const schemaNode = getChildren(schemaAccessNode)[0];
-    const schemaRelations =
-      this.schemaTypeBuilder.getOrBuildRelationsFromDeclaration(
-        schemaNode,
-        checker
-      );
+    const schemaRelations = this.lookupRelations(schemaNode, checker);
     // range of text to replace. Inclusive of `<` and `>` if they exist.
     const range: [number, number] = [
       schemaAccessNode.getEnd(),
@@ -83,13 +78,6 @@ export default class QueryTypeBuilder {
       const shape = parseQueryRelations(
         getQueryRelations(query, schemaRelations)
       )[0];
-      // const type = checker.getTypeOfSymbol(schemaType);
-      // const props = type.getProperties();
-      // top level props are records.
-      // prop name is record name
-      // prop type is record type
-      // pack all these into dicts to pass over to type generator
-      // need to convert schemaType back to raw relation type(s)
 
       // TODO: indent by original file indentation of surrounding context
       if (shape == null) {
@@ -108,5 +96,41 @@ export default class QueryTypeBuilder {
   ${e.message}
 */}>`;
     }
+  }
+
+  /**
+   * The ordering in which we process files guarantees that the cache is already warm with
+   * schema definitions.
+   */
+  private lookupRelations(
+    schemaNode: ts.Node,
+    checker: ts.TypeChecker
+  ): ReturnType<typeof getDdlRelations> {
+    const schemaNodeSymbol = checker.getSymbolAtLocation(schemaNode);
+    const otherDecl = schemaNodeSymbol?.declarations;
+    const decl = schemaNodeSymbol?.valueDeclaration;
+
+    if (!decl) {
+      if (!otherDecl) {
+        return [];
+      }
+      console.log("fname: ", otherDecl[0].getSourceFile().fileName);
+      console.log("start: ", otherDecl[0].getStart());
+
+      return [];
+    }
+
+    if (decl.getSourceFile().fileName != this.sourceFile.fileName) {
+      this.dag.addDependent(
+        decl.getSourceFile().fileName,
+        this.sourceFile.fileName
+      );
+    }
+
+    // query text may not be available to us.
+    // we may instead need to rely on the type shape
+    // stringified.
+    // or cache by `file name`, `start location` of `schema node`?
+    return [];
   }
 }
