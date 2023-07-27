@@ -22,27 +22,27 @@ import crypto from "crypto";
 export default class SchemaCache {
   private map = new Map<
     string,
-    Map<string, ReturnType<typeof getDdlRelations>>
+    Map<number, ReturnType<typeof getDdlRelations>>
   >();
   // cache on file name + schema content hash.
   // we can actually get the schema declaration in its entirity from a query site.
   // this means we don't have to do weir visitation of other files.
   // when the file containing schemas itself changes it'll nuke the cache for that file since it'll
   // fill in all schemas afterwards.
-  getByHash(
+  get(
     fileName: string,
-    schemaText: string
+    loc: number
   ): ReturnType<typeof getDdlRelations> | null {
     const existing = this.map.get(fileName);
     if (!existing) {
       return null;
     }
-    return existing.get(hash(schemaText)) || null;
+    return existing.get(loc) || null;
   }
 
   cache(
     fileName: string,
-    schemaText: string,
+    loc: number,
     schema: ReturnType<typeof getDdlRelations>
   ) {
     let existing = this.map.get(fileName);
@@ -50,7 +50,7 @@ export default class SchemaCache {
       existing = new Map();
       this.map.set(fileName, existing);
     }
-    existing.set(hash(schemaText), schema);
+    existing.set(loc, schema);
   }
 
   clearForFile(fileName: string) {
