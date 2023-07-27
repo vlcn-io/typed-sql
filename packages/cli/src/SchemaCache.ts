@@ -15,3 +15,19 @@
  * The assumption is that we can go resulve an import and
  * open the file. We shall see.
  */
+
+import { getDdlRelations } from "@vlcn.io/type-gen-ts-adapter";
+import ts from "typescript";
+
+export default class SchemaCache {
+  getByType(
+    checker: ts.TypeChecker,
+    schemaType: ts.Symbol
+  ): ReturnType<typeof getDdlRelations> | null {
+    return null;
+  }
+
+  getByHash(schemaHash: string): ReturnType<typeof getDdlRelations> | null {
+    return null;
+  }
+}

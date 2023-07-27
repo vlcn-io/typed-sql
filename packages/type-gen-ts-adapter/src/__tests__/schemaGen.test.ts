@@ -1,5 +1,5 @@
 import { test, expect } from "vitest";
-import { parseDdlRelations, getDdlRelations } from "..";
+import { parseDdlRelations, getDdlRelations } from "../index.js";
 
 test("generates types for table schemas", () => {
   const cases = [

@@ -5,8 +5,8 @@ import type {
   Coercer,
   Schema,
   SQL,
-} from "./types";
-import { schema } from "./types";
+} from "./types.js";
+import { schema } from "./types.js";
 
 // TODO: update to take in the result of the `schema` tag
 // Usage would look like:
