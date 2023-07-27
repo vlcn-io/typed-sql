@@ -8,9 +8,11 @@ import ts from "typescript";
 import SchemaTypeBuilder from "./SchemaTypeBuilder.js";
 import { Fix } from "./types.js";
 import DependencyGraph from "../DependencyGraph.js";
+import SchemaCache from "../SchemaCache.js";
 
 export default class QueryTypeBuilder {
   constructor(
+    private schemaCache: SchemaCache,
     private dag: DependencyGraph,
     private sourceFile: ts.SourceFile
   ) {}
@@ -106,19 +108,29 @@ export default class QueryTypeBuilder {
     schemaNode: ts.Node,
     checker: ts.TypeChecker
   ): ReturnType<typeof getDdlRelations> {
-    const schemaNodeSymbol = checker.getSymbolAtLocation(schemaNode);
-    const otherDecl = schemaNodeSymbol?.declarations;
-    const decl = schemaNodeSymbol?.valueDeclaration;
+    // const schemaNodeSymbol = checker.getSymbolAtLocation(schemaNode);
+    const type = checker.getTypeAtLocation(schemaNode);
+    const prop = type.getProperty("__type")!;
+    const internalType = checker.getTypeOfSymbol(prop);
+    // const internalProps = checker.getPropertiesOfType(internalType);
+
+    const decl = internalType.getSymbol()?.declarations?.[0];
 
     if (!decl) {
-      if (!otherDecl) {
-        return [];
-      }
-      console.log("fname: ", otherDecl[0].getSourceFile().fileName);
-      console.log("start: ", otherDecl[0].getStart());
-
-      return [];
+      const loc = this.sourceFile.getLineAndCharacterOfPosition(
+        schemaNode.getStart()
+      );
+      throw new Error(
+        `${this.sourceFile.fileName}@${loc.line},${loc.character}: could not find the referenced schema typescript type!`
+      );
     }
+
+    // console.log(
+    //   "source? ",
+    //   decl.getSourceFile().fileName,
+    //   decl.getStart(),
+    //   decl.getText()
+    // );
 
     if (decl.getSourceFile().fileName != this.sourceFile.fileName) {
       this.dag.addDependent(
@@ -127,10 +139,29 @@ export default class QueryTypeBuilder {
       );
     }
 
-    // query text may not be available to us.
-    // we may instead need to rely on the type shape
-    // stringified.
-    // or cache by `file name`, `start location` of `schema node`?
-    return [];
+    const ret = this.schemaCache.get(
+      decl.getSourceFile().fileName,
+      decl.getStart()
+    );
+    if (!ret) {
+      const loc = this.sourceFile.getLineAndCharacterOfPosition(
+        schemaNode.getStart()
+      );
+      throw new Error(
+        `${this.sourceFile.fileName}@${loc.line},${loc.character}: could not find the referenced schema relations!`
+      );
+    }
+
+    return ret;
   }
 }
+
+/**
+ * Cache relation by
+ * type_structure -> relation
+ *
+ * Still blow away on processing file that defines the type structures.
+ *
+ * Map dag by:
+ * file -> type_structures -> dependent files
+ */

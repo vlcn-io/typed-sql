@@ -57,6 +57,7 @@ export default class FileVisitor {
       this.schemaTemplates
     );
     const queryFixes = new QueryTypeBuilder(
+      this.schemaCache,
       this.dag,
       this.sourceFile
     ).buildQueryTypes(this.sqlTemplates, checker);
@@ -75,7 +76,9 @@ export default class FileVisitor {
   }
 
   visitQueryDefs(checker: ts.TypeChecker) {
+    this.collectQueryNodes(this.sourceFile, checker);
     const queryFixes = new QueryTypeBuilder(
+      this.schemaCache,
       this.dag,
       this.sourceFile
     ).buildQueryTypes(this.sqlTemplates, checker);

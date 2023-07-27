@@ -62,7 +62,7 @@ export default class SchemaTypeBuilder {
 
       this.schemaCache.cache(
         file.fileName,
-        templateStringNode.getText(),
+        schemaAccessNode.getEnd() + 1,
         schemaRelations
       );
 
