@@ -1,13 +1,6 @@
 import ts from "typescript";
-import {
-  parseDdlRelations,
-  getDdlRelations,
-  getQueryRelations,
-  parseQueryRelations,
-} from "@vlcn.io/type-gen-ts-adapter";
-import { getChildren, trimTag } from "./util.js";
-import { normalize } from "path";
 import SchemaCache from "./SchemaCache.js";
+import FileVisitor from "./FileVisitor.js";
 
 export default class Analyzer {
   private schemaCache = new SchemaCache();
@@ -56,8 +49,34 @@ export default class Analyzer {
     host.afterProgramCreate = (program) => {
       console.log("prog create");
       const checker = program.getProgram().getTypeChecker();
+      const seen = new Set<string>();
       for (const file of program.getSourceFiles()) {
-        this.visit(file, file, checker);
+        if (seen.has(file.fileName)) {
+          continue;
+        }
+        this.visit(file, checker);
+        // pull things that depend on `file` from the `dag` and visit those too
+        // if they have not already been visited.
+        // well if they've already been visited then the base file was visited too through them...
+        // so when we hit file, we should check the dag to see if anything that uses file was already visited
+        // if so we can skip file b/c it was done in the recursive file visit step.
+        // but we still must visit all the users of the file, even if we do not visit the file itself.
+        // so:
+        // - get file
+        // - check if seen has it, if so skip
+        // - get all files that depend on file from DAG
+        // - seen if any of those are in seen. If so, do not process current file
+        // - for the rest of the dependents no in the DAG, visit them
+        // - add them all to seen
+        // - continue
+        // log in our schema cache if we keep re-visiting the same schema file.
+        // hmm...
+        // Maybe file visitor should instead return a list of unresolved dependencies and the file itself.
+        // As this list builds up,
+        // we visit all the unresolved dependencies.
+        // once all depenencies are resolved, we visit the dependents.
+        // this prevents re-processing the same file over and manages the DAG with the function call stack
+        seen.add(file.fileName);
       }
       // const affectedFile = program.getSemanticDiagnosticsOfNextAffectedFile?.()?.affected;
 
@@ -69,192 +88,7 @@ export default class Analyzer {
     ts.createWatchProgram(host);
   }
 
-  private visit(
-    sourceFile: ts.SourceFile,
-    node: ts.Node,
-    checker: ts.TypeChecker
-  ) {
-    if (!ts.isTaggedTemplateExpression(node)) {
-      ts.forEachChild(node, (node) => this.visit(sourceFile, node, checker));
-      return;
-    }
-
-    const tagName = node.tag.getText();
-    if (tagName.endsWith(".sql")) {
-      this.processSqlTemplate(sourceFile, node, checker);
-    } else if (tagName.endsWith("schema")) {
-      this.processDeclareSchemaTemplate(sourceFile, node, checker);
-    }
-  }
-
-  private processDeclareSchemaTemplate(
-    sourceFile: ts.SourceFile,
-    node: ts.TaggedTemplateExpression,
-    checker: ts.TypeChecker
-  ): ReturnType<typeof getDdlRelations> {
-    const children = getChildren(node);
-    const templateStringNode = children[children.length - 1];
-    const maybeExistingNode = children[1];
-    const schemaAccessNode = children[0];
-    const range: [number, number] = [
-      schemaAccessNode.getEnd(),
-      templateStringNode.getStart(),
-    ];
-    if (ts.isTemplateLiteral(templateStringNode)) {
-      let existingContent = "";
-      if (maybeExistingNode != templateStringNode) {
-        existingContent = normalize(`<${maybeExistingNode.getText()}>`);
-      }
-      const schemaRelations = getDdlRelations(
-        trimTag(templateStringNode.getText())
-      );
-      const replacement = this.genRecordShapeCode(schemaRelations);
-      // this.schemaCache.put();
-      if (existingContent == normalize(replacement)) {
-        return schemaRelations;
-      }
-      const pos = sourceFile.getLineAndCharacterOfPosition(range[0]);
-      // TODO: replace!
-      // context.report({
-      //   message: `content does not match: ${replacement}`,
-      //   loc: { line: pos.line, column: pos.character },
-      //   fix: (fixer) => fixer.replaceTextRange(range, replacement),
-      // });
-
-      return schemaRelations;
-    }
-
-    return [];
-  }
-
-  private processSqlTemplate(
-    sourceFile: ts.SourceFile,
-    node: ts.TaggedTemplateExpression,
-    checker: ts.TypeChecker
-  ) {
-    const children = getChildren(node);
-    const templateStringNode = children[children.length - 1];
-    const schemaAccessNode = children[0];
-    const schemaNode = getChildren(schemaAccessNode)[0];
-    const schemaNodeSymbol = checker.getSymbolAtLocation(schemaNode);
-    const decl = schemaNodeSymbol?.valueDeclaration;
-    if (decl) {
-      // this is the correct source file containing schema!
-      console.log(decl.getSourceFile().fileName);
-      // so based on file name we should be able to do
-      // a "schema only" pass of the file
-      // to pull and cache schema definitions
-    }
-    // range of text to replace. Inclusive of `<` and `>` if they exist.
-    const range: [number, number] = [
-      schemaAccessNode.getEnd(),
-      templateStringNode.getStart(),
-    ];
-    const maybeExistingNode = children[1];
-    if (ts.isTemplateLiteral(templateStringNode)) {
-      // process it, extracting type information
-      let existingContent = "";
-      if (maybeExistingNode != templateStringNode) {
-        existingContent = normalize(`<${maybeExistingNode.getText()}>`);
-      }
-      const replacement = this.genQueryShape(
-        checker,
-        decl!,
-        templateStringNode.getText()
-      );
-      if (existingContent == normalize(replacement)) {
-        return;
-      }
-      const pos = sourceFile.getLineAndCharacterOfPosition(range[0]);
-      // TODO: replace!
-      // context.report({
-      //   message: `content does not match: ${replacement}`,
-      //   loc: { line: pos.line, column: pos.character },
-      //   fix: (fixer) => fixer.replaceTextRange(range, replacement),
-      // });
-    }
-  }
-
-  // TODO: take in original indentation offset
-  private genRecordShapeCode(
-    relations: ReturnType<typeof getDdlRelations>
-  ): string {
-    try {
-      const recordTypes = parseDdlRelations(relations);
-      return `<{
-  ${Object.entries(recordTypes)
-    .map(([key, value]) => {
-      return `${key.replace("main.", "")}: {
-    ${Object.entries(value)
-      .map(([key, value]) => {
-        return `${key}: ${value}`;
-      })
-      .join(",\n    ")}
-  }`;
-    })
-    .join(",\n  ")}
-}>`;
-    } catch (e: any) {
-      return `<{/*
-  ${e.message}
-*/}>` as string;
-    }
-  }
-
-  private eagerlyProcessSchema(
-    checker: ts.TypeChecker,
-    schemaType: ts.Symbol
-  ): ReturnType<typeof getDdlRelations> {
-    const decls = schemaType.getDeclarations() || [];
-    for (const decl of decls) {
-      const sourceFile = decl.getSourceFile();
-      const fileName = sourceFile.fileName;
-      console.log(fileName);
-    }
-
-    return [];
-  }
-
-  private genQueryShape(
-    checker: ts.TypeChecker,
-    schemaNodeDecl: ts.Declaration,
-    query: string
-  ) {
-    query = trimTag(query);
-
-    // TODO: they could have passed many queries...
-    try {
-      let schemaRelations = this.schemaCache.getByType(checker, schemaType);
-      if (schemaRelations == null) {
-        schemaRelations = this.eagerlyProcessSchema(checker, schemaType);
-      }
-      const shape = parseQueryRelations(
-        getQueryRelations(query, schemaRelations)
-      )[0];
-      // const type = checker.getTypeOfSymbol(schemaType);
-      // const props = type.getProperties();
-      // top level props are records.
-      // prop name is record name
-      // prop type is record type
-      // pack all these into dicts to pass over to type generator
-      // need to convert schemaType back to raw relation type(s)
-
-      // TODO: indent by original file indentation of surrounding context
-      if (shape == null) {
-        return `<unknown>`;
-      } else {
-        return `<{
-  ${Object.entries(shape)
-    .map(([key, value]) => {
-      return `${key}: ${value}`;
-    })
-    .join(",\n  ")}
-}>`;
-      }
-    } catch (e: any) {
-      return `<{/*
-  ${e.message}
-*/}>`;
-    }
+  private visit(sourceFile: ts.SourceFile, checker: ts.TypeChecker) {
+    new FileVisitor(this.schemaCache, sourceFile).visit(checker);
   }
 }
