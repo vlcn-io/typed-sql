@@ -16,3 +16,12 @@ export function normalize(val: string) {
 export function trimTag(tag: string) {
   return tag.substring(1, tag.length - 1);
 }
+
+export function replaceRange(
+  s: string,
+  start: number,
+  end: number,
+  substitute: string
+) {
+  return s.slice(0, start) + substitute + s.slice(end);
+}

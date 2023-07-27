@@ -40,7 +40,6 @@ export default class QueryTypeBuilder {
     const templateStringNode = children[children.length - 1];
     const schemaAccessNode = children[0];
     const schemaNode = getChildren(schemaAccessNode)[0];
-    const schemaRelations = this.lookupRelations(schemaNode, checker);
     // range of text to replace. Inclusive of `<` and `>` if they exist.
     const range: [number, number] = [
       schemaAccessNode.getEnd(),
@@ -48,20 +47,25 @@ export default class QueryTypeBuilder {
     ];
     const maybeExistingNode = children[1];
     if (ts.isTemplateLiteral(templateStringNode)) {
-      // process it, extracting type information
-      let existingContent = "";
-      if (maybeExistingNode != templateStringNode) {
-        existingContent = normalize(`<${maybeExistingNode.getText()}>`);
+      try {
+        const schemaRelations = this.lookupRelations(schemaNode, checker);
+        // process it, extracting type information
+        let existingContent = "";
+        if (maybeExistingNode != templateStringNode) {
+          existingContent = normalize(`<${maybeExistingNode.getText()}>`);
+        }
+        const replacement = this.genQueryShape(
+          templateStringNode.getText(),
+          schemaRelations
+        );
+        if (existingContent == normalize(replacement)) {
+          return null;
+        }
+        // const pos = this.sourceFile.getLineAndCharacterOfPosition(range[0]);
+        return [range, replacement];
+      } catch (e: any) {
+        return [range, `<{/*${e.message}*/}>`];
       }
-      const replacement = this.genQueryShape(
-        templateStringNode.getText(),
-        schemaRelations
-      );
-      if (existingContent == normalize(replacement)) {
-        return null;
-      }
-      // const pos = this.sourceFile.getLineAndCharacterOfPosition(range[0]);
-      return [range, replacement];
     }
 
     throw new Error(
@@ -112,6 +116,7 @@ export default class QueryTypeBuilder {
     const type = checker.getTypeAtLocation(schemaNode);
     const prop = type.getProperty("__type")!;
     const internalType = checker.getTypeOfSymbol(prop);
+    // console.log(internalType.getSymbol()?.declarations);
     // const internalProps = checker.getPropertiesOfType(internalType);
 
     const decl = internalType.getSymbol()?.declarations?.[0];
@@ -121,7 +126,7 @@ export default class QueryTypeBuilder {
         schemaNode.getStart()
       );
       throw new Error(
-        `${this.sourceFile.fileName}@${loc.line},${loc.character}: could not find the referenced schema typescript type!`
+        `Could not find the referenced schema typescript type! Is it defined?`
       );
     }
 
@@ -148,7 +153,7 @@ export default class QueryTypeBuilder {
         schemaNode.getStart()
       );
       throw new Error(
-        `${this.sourceFile.fileName}@${loc.line},${loc.character}: could not find the referenced schema relations!`
+        `Could not find the referenced schema relations! Are they defined?`
       );
     }
 
