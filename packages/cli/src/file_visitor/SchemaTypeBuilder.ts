@@ -28,7 +28,20 @@ export default class SchemaTypeBuilder {
     checker: ts.TypeChecker
   ): ReturnType<typeof getDdlRelations> {
     const schemaNodeSymbol = checker.getSymbolAtLocation(schemaNode);
-    const decl = schemaNodeSymbol?.valueDeclaration!;
+    const otherDecl = schemaNodeSymbol?.declarations;
+    const decl = schemaNodeSymbol?.valueDeclaration;
+    if (!decl) {
+      if (!otherDecl) {
+        throw new Error("Missing other decl too!");
+      }
+      // console.log(schemaNodeSymbol.escapedName);
+      // console.log(schemaNodeSymbol.getName());
+      // console.log(schemaNodeSymbol.name);
+      // console.log(otherDecl[0].getSourceFile().fileName);
+      // console.log(otherDecl.length);
+      // throw new Error("Missing decl");
+      return [];
+    }
 
     // the declaration is in another file. That means the current file depends on that one.
     if (decl.getSourceFile().fileName != this.sourceFile.fileName) {
@@ -39,8 +52,8 @@ export default class SchemaTypeBuilder {
     }
 
     // this is the correct source file containing schema!
-    console.log(decl.getSourceFile().fileName);
-    console.log(decl.getFullText());
+    // console.log(decl.getSourceFile().fileName);
+    // console.log(decl.getFullText());
 
     // if the file has already been visited then we'll already have the required relations.
     // what is the cache key for those relations though???
