@@ -1,9 +1,12 @@
 import ts from "typescript";
 import SchemaCache from "./SchemaCache.js";
-import FileVisitor from "./FileVisitor.js";
+import FileVisitor from "./file_visitor/FileVisitor.js";
+import DependencyGraph from "./DependencyGraph.js";
 
 export default class Analyzer {
+  // The schema cache and dag are stateful given the analyzer will watch a folder for file modifications.
   private schemaCache = new SchemaCache();
+  private dag = new DependencyGraph();
   constructor(private projectDir: string, private tsConfigName: string) {}
 
   start() {
@@ -50,10 +53,15 @@ export default class Analyzer {
       console.log("prog create");
       const checker = program.getProgram().getTypeChecker();
       const visited = new Set<string>();
+      const dependents = new Set<string>();
+      // TODO: is this incremental? Or we need `affectedFile` some such?
       for (const file of program.getSourceFiles()) {
-        new FileVisitor(this.schemaCache, file, visited).visit(checker);
-        // pull things that depend on `file` from the `dag` and visit those too!
-        // the file visitor will ignore them if they were already visited.
+        if (visited.has(file.fileName)) {
+          continue;
+        }
+        visited.add(file.fileName);
+        new FileVisitor(this.schemaCache, this.dag, file).visit(checker);
+        // pull things that depend on `file` from the `dag` and visit those too if they've not been visited!
       }
       // const affectedFile = program.getSemanticDiagnosticsOfNextAffectedFile?.()?.affected;
 
