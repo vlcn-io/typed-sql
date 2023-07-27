@@ -6,5 +6,5 @@
     "allowSyntheticDefaultImports": true
   },
   "include": ["./src/"],
-  "references": [{ "path": "../type-gen-ts-adapter/tsconfig.esm.json" }]
+  "references": [{ "path": "../type-gen-ts-adapter" }]
 }

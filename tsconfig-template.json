@@ -5,7 +5,7 @@
     "module": "esnext",
     "target": "esnext",
     "skipLibCheck": true,
-    "moduleResolution": "Node",
+    "moduleResolution": "NodeNext",
     "baseUrl": "./src/",
     "declaration": true,
     "allowJs": true,

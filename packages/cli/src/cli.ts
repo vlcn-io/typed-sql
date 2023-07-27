@@ -1,5 +1,5 @@
 import { program } from "commander";
-import Analyzer from "./Analyzer";
+import Analyzer from "./Analyzer.js";
 
 program.requiredOption(
   "-p, --project <path>",

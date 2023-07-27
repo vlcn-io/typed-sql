@@ -1,5 +1,5 @@
 import { it, expect, vi } from "vitest";
-import { createSQL } from "./index";
+import { createSQL } from "./index.js";
 
 const exec = vi.fn(() => [{ a: "42" }]);
 const sql = createSQL<{ a: { a: string } }>(`CREATE TABLE a (a TEXT)`, exec);

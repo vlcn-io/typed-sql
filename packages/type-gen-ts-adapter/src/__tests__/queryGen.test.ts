@@ -5,7 +5,7 @@ import {
   getQueryRelations,
   NamedRelation,
   parseQueryRelations,
-} from "..";
+} from "../index.js";
 
 test("queries", () => {
   const schema1 = getDdlRelations(

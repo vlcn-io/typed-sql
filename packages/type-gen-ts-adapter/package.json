@@ -3,18 +3,12 @@
   "private": "true",
   "version": "1.0.0",
   "description": "",
-  "exports": {
-    ".": {
-      "types": "./dist/types/index.d.ts",
-      "require": "./dist/cjs/index.js",
-      "import": "./dist/esm/index.js",
-      "default": "./dist/esm/index.js"
-    }
-  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "test": "vitest",
-    "lint": "eslint --fix src",
-    "build": "tsc -b ./tsconfig.cjs.json ./tsconfig.esm.json ./tsconfig.types.json"
+    "lint": "eslint --fix src"
   },
   "keywords": [],
   "author": "",

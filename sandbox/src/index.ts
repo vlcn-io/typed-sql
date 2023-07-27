@@ -30,5 +30,3 @@ const query = App.sql<{
   place_name: string
 }>`SELECT city.id as city_id, place.name as place_name 
   FROM city JOIN place`;
-
-
