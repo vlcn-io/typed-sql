@@ -1,5 +1,32 @@
 # cli
 
+Install -
+
+```sh
+npm install @vlcn.io/typed-sql-cli
+```
+
+Add to `package.json`
+
+```json
+"scripts": {
+  "sql-watch": "typed-sql -p ."
+},
+```
+
+Run:
+
+```sh
+npm run sql-watch
+```
+
+Args:
+
+required: `-p path/to/project`
+optional: `-t name_of_tsconfig.json` defaults to tsconfig.json
+
+---
+
 A different route.
 
 The current path uses an ESLint plugin to inject generated types on save.
@@ -9,4 +36,3 @@ The current path uses an ESLint plugin to inject generated types on save.
 - We need a persistent process to retain the state of schemas so we can use that state as we encounter future queries
 
 The cli is the new approach to do all of this and drop ESLint.
-
