@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "tsql-watch": "typed-sql .",
+    "sql-watch": "typed-sql -p .",
     "build": "tsc"
   },
   "keywords": [],
