@@ -4,7 +4,7 @@ Generates types for your SQL.
 
 https://github.com/vlcn-io/typed-sql/assets/1009003/4459edb2-4a52-4641-819d-5805c04d943a
 
-ALPHA release. See the current [SINGLE FILE](#single-file) limitation. In theory this covers all of SQLite. In practice, I have written very few tests yet so likely there are many bugs.
+ALPHA release. In theory this covers all of SQLite. In practice, I have written very few tests yet so likely there are many bugs.
 
 Documented issues: https://github.com/vlcn-io/typed-sql/issues
 
@@ -17,14 +17,6 @@ Types are generated via a watch task installed with `@vlcn.io/typed-sql-cli`.
 After installing the cli, see the [runtime component](./packages/typed-sql/README.md) package.
 
 # Current Limitations & Future Work
-
-## Single File
-
-Changing a schema definition should cause types for all queries using that schema to be recomputed. I do not yet keep a DAG of these dependencies nor do I yet ensure that schema definitions are processed before query definitions in a multi-file project.
-
-Given all of this, you **must** define your schemas and queries all in a single file. This will be fixed before a production ready release.
-
-See [issue 7](https://github.com/vlcn-io/typed-sql/issues/7) & incoming fix: https://github.com/vlcn-io/typed-sql/pull/23
 
 ## Composition
 
