@@ -125,6 +125,9 @@ importers:
       '@vlcn.io/eslint-plugin-typed-sql':
         specifier: workspace:*
         version: link:../packages/eslint-plugin
+      '@vlcn.io/typed-sql-cli':
+        specifier: workspace:*
+        version: link:../packages/cli
       eslint:
         specifier: ^8.44.0
         version: 8.44.0

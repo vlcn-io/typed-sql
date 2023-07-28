@@ -1,15 +1,22 @@
 import { schema } from "@vlcn.io/typed-sql";
 
-export const LocApp = schema<{
-  city: {
+export const MyApp = schema<{
+  user: {
     id: number,
-    name: string,
-    lat: number,
-    long: number
+    name: string
+  },
+  task: {
+    id: number,
+    what: string,
+    owner_id: number,
+    list_id: number | null
   }
-}>`CREATE TABLE city (
+}>`
+CREATE TABLE user (id INTEGER PRIMARY KEY NOT NULL, name TEXT NOT NULL);
+CREATE TABLE task (
   id INTEGER PRIMARY KEY NOT NULL,
-  name TEXT NOT NULL,
-  lat FLOAT NOT NULL,
-  long FLOAT NOT NULL
-);`;
+  what TEXT NOT NULL,
+  owner_id INTEGER NOT NULL,
+  list_id INTEGER
+)
+`;

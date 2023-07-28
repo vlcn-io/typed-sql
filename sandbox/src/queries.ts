@@ -1,10 +1,11 @@
-import { LocApp } from './schemas.js';
+import { MyApp } from './schemas.js';
  
-LocApp.sql<{
+const getUser = MyApp.sql<{
   id: number,
-  name: string,
-  lat: number,
-  long: number
-}>`SELECT * FROM city`;
+  name: string
+}>`SELECT * FROM user WHERE id = ?`;
 
-
+const getTasks = MyApp.sql<{
+  id: number,
+  owner_id: number
+}>`SELECT id, owner_id FROM task WHERE owner_id`

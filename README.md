@@ -10,11 +10,11 @@ Documented issues: https://github.com/vlcn-io/typed-sql/issues
 
 # Installation
 
-Types are generated via an ESLint plugin. You'll need to install and configure this plugin in your workspace. See the [eslint plugin](./packages/eslint-plugin/README.md) package for details.
+Types are generated via a watch task installed with `@vlcn.io/typed-sql-cli`.
 
 # Usage
 
-After installing the plugin, see the [runtime component](./packages/typed-sql/README.md) package.
+After installing the cli, see the [runtime component](./packages/typed-sql/README.md) package.
 
 # Current Limitations & Future Work
 

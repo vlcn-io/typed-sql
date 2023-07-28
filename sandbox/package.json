@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint --fix src",
+    "tsql-watch": "typed-sql .",
     "build": "tsc"
   },
   "keywords": [],
@@ -17,6 +17,7 @@
     "better-sqlite3": "^8.4.0"
   },
   "devDependencies": {
+    "@vlcn.io/typed-sql-cli": "workspace:*",
     "@types/better-sqlite3": "^7.6.4",
     "@typescript-eslint/eslint-plugin": "^5.61.0",
     "@typescript-eslint/parser": "^5.61.0",
