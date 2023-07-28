@@ -5,7 +5,6 @@ import {
 } from "@vlcn.io/type-gen-ts-adapter";
 import { getChildren, normalize, trimTag } from "../util.js";
 import ts from "typescript";
-import SchemaTypeBuilder from "./SchemaTypeBuilder.js";
 import { Fix } from "./types.js";
 import DependencyGraph from "../DependencyGraph.js";
 import SchemaCache from "../SchemaCache.js";
