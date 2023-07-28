@@ -12,6 +12,12 @@ Documented issues: https://github.com/vlcn-io/typed-sql/issues
 
 Types are generated via a watch task installed with `@vlcn.io/typed-sql-cli`.
 
+```
+pnpm install @vlcn.io/typed-sql-cli`
+```
+
+See [the cli package](./packages/cli)
+
 # Usage
 
 After installing the cli, see the [runtime component](./packages/typed-sql/README.md) package.
