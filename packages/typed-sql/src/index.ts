@@ -39,3 +39,18 @@ function processTemplateStrings(strings: TemplateStringsArray, values: any[]) {
   });
   return str;
 }
+
+/*
+
+const getTasks = MyApp.sql<{
+  
+}>`SELECT * FROM task WHERE owner_id = ?`;
+
+CREATE TABLE task (
+  id INTEGER PRIMARY KEY NOT NULL,
+  what TEXT NOT NULL,
+  owner_id INTEGER NOT NULL,
+  complete BOOLEAN NOT NULL,
+  list_id INTEGER
+);
+*/
