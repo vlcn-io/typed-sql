@@ -7,5 +7,7 @@ const getUser = MyApp.sql<{
 
 const getTasks = MyApp.sql<{
   id: number,
-  owner_id: number
-}>`SELECT id, owner_id FROM task WHERE owner_id`
+  what: string,
+  owner_id: number,
+  list_id: number | null
+}>`SELECT * FROM task WHERE owner_id`

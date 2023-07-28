@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
-  "bin": "dist/cli.js",
+  "bin": {
+    "typed-sql": "dist/cli.js"
+  },
   "type": "module",
   "scripts": {
     "test": "vitest",
