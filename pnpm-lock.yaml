@@ -1,9 +1,5 @@
 lockfileVersion: '6.0'
 
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false
-
 importers:
 
   .:
@@ -81,6 +77,9 @@ importers:
 
   sandbox:
     dependencies:
+      '@vlcn.io/typed-db':
+        specifier: workspace:*
+        version: link:../incubator/typed-db
       '@vlcn.io/typed-sql':
         specifier: workspace:*
         version: link:../packages/typed-sql
@@ -3491,3 +3490,7 @@ packages:
     resolution: {integrity: sha512-9bnSc/HEW2uRy67wc+T8UwauLuPJVn28jb+GtJY16iiKWyvmYJRXVT4UamsAEGQfPohgr2q4Tq0sQbQlxTfi1g==}
     engines: {node: '>=12.20'}
     dev: true
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false

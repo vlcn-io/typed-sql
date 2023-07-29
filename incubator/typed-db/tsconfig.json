@@ -6,7 +6,10 @@
     "allowSyntheticDefaultImports": true
   },
   "include": ["./src/"],
-  "references": [{
-    "path": "../../packages/typed-sql"
-  }]
+  "exclude": ["./src/*.test.ts"],
+  "references": [
+    {
+      "path": "../../packages/typed-sql"
+    }
+  ]
 }
