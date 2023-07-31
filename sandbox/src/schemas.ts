@@ -2,13 +2,13 @@ import { schema } from "@vlcn.io/typed-sql";
 
 export const MyApp = schema<{
   user: {
-    id: number,
+    id: number;
     name: string
-  },
+  };
   task: {
-    id: number,
-    what: string,
-    owner_id: number,
+    id: number;
+    what: string;
+    owner_id: number;
     list_id: number | null
   }
 }>`

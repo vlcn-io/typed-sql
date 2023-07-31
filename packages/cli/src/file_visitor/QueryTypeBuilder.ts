@@ -93,7 +93,7 @@ export default class QueryTypeBuilder {
     .map(([key, value]) => {
       return `${key}: ${value}`;
     })
-    .join(",\n  ")}
+    .join(";\n  ")}
 }>`;
       }
     } catch (e: any) {
