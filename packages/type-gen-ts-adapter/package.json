@@ -1,6 +1,6 @@
 {
   "name": "@vlcn.io/type-gen-ts-adapter",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "",
   "type": "module",
   "main": "./dist/index.js",
