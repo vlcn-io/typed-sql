@@ -3,7 +3,6 @@ packages:
   - 'incubator/typed-db'
   - 'sandbox'
   - 'packages/type-gen/pkg'
-  - 'packages/eslint-plugin'
   - 'packages/type-gen-ts-adapter'
   - 'tsbuild-all'
   - 'packages/cli'
