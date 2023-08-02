@@ -1,5 +1,13 @@
 # @vlcn.io/type-gen-ts-adapter
 
+## 0.2.4
+
+### Patch Changes
+
+- ignore sql literals that are not ours
+- Updated dependencies
+  - typed-sql-type-gen@0.2.4
+
 ## 0.2.3
 
 ### Patch Changes

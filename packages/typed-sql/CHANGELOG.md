@@ -1,5 +1,11 @@
 # @vlcn.io/typed-sql
 
+## 0.2.4
+
+### Patch Changes
+
+- ignore sql literals that are not ours
+
 ## 0.2.3
 
 ### Patch Changes
