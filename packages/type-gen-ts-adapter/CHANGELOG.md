@@ -1,5 +1,13 @@
 # @vlcn.io/type-gen-ts-adapter
 
+## 0.2.3
+
+### Patch Changes
+
+- fix line endings for types
+- Updated dependencies
+  - typed-sql-type-gen@0.2.3
+
 ## 0.2.2
 
 ### Patch Changes

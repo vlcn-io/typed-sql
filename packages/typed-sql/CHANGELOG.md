@@ -1,5 +1,11 @@
 # @vlcn.io/typed-sql
 
+## 0.2.3
+
+### Patch Changes
+
+- fix line endings for types
+
 ## 0.2.2
 
 ### Patch Changes

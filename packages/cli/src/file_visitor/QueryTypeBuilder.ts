@@ -48,6 +48,9 @@ export default class QueryTypeBuilder {
     if (ts.isTemplateLiteral(templateStringNode)) {
       try {
         const schemaRelations = this.lookupRelations(schemaNode, checker);
+        if (schemaRelations == null) {
+          return null;
+        }
         // process it, extracting type information
         let existingContent = "";
         if (maybeExistingNode != templateStringNode) {
@@ -110,10 +113,14 @@ export default class QueryTypeBuilder {
   private lookupRelations(
     schemaNode: ts.Node,
     checker: ts.TypeChecker
-  ): ReturnType<typeof getDdlRelations> {
+  ): ReturnType<typeof getDdlRelations> | null {
     // const schemaNodeSymbol = checker.getSymbolAtLocation(schemaNode);
     const type = checker.getTypeAtLocation(schemaNode);
-    const prop = type.getProperty("__type")!;
+    const prop = type.getProperty("__type");
+    // must not be _our_ sql literal but someone else's
+    if (prop == null) {
+      return null;
+    }
     const internalType = checker.getTypeOfSymbol(prop);
     // console.log(internalType.getSymbol()?.declarations);
     // const internalProps = checker.getPropertiesOfType(internalType);
