@@ -1,3 +1,4 @@
+use crate::util;
 use crate::{error::Error, types::*};
 use fallible_iterator::FallibleIterator;
 use sqlite3_parser::{
@@ -157,7 +158,7 @@ fn select_to_relation(
                     // the chosen table name must exist in from_relations
                     for relation in &from_relations {
                         if let Some(name) = &relation.0 {
-                            if &format!("main.{}", table_name) == name {
+                            if &format!("main.{}", util::unquote_ident(table_name)) == name {
                                 return relation.1.to_vec();
                             }
                         }
@@ -178,12 +179,13 @@ fn select_to_relation(
         Ok((None, cols))
     }
 }
+
 fn expression_to_col_name(e: &Expr) -> Result<String, Error> {
     match e {
         Expr::Name(Name(name))
         | Expr::Id(Id(name))
         | Expr::Qualified(_, Name(name))
-        | Expr::DoublyQualified(_, _, Name(name)) => Ok(name.to_string()),
+        | Expr::DoublyQualified(_, _, Name(name)) => Ok(util::unquote_ident(name).to_string()),
         _ => {
             let mut collector = TokenCollector { parts: vec![] };
             e.to_tokens(&mut collector).unwrap(); // TokenCollector always returns Ok
@@ -215,7 +217,8 @@ fn resolve_selection_set_expr_type(
             )))
         }
         Expr::Qualified(Name(table_name), Name(col_name)) => {
-            let prefixed = format!("main.{}", table_name);
+            let prefixed = format!("main.{}", util::unquote_ident(table_name));
+            let col_name = util::unquote_ident(col_name);
             for relation in from_relations {
                 if let Some(relation_name) = &relation.0 {
                     if &prefixed == relation_name {
@@ -233,7 +236,8 @@ fn resolve_selection_set_expr_type(
             )))
         }
         Expr::DoublyQualified(Name(db_name), Name(table_name), Name(col_name)) => {
-            let prefixed = format!("{}.{}", db_name, table_name);
+            let prefixed = format!("{}.{}", db_name, util::unquote_ident(table_name));
+            let col_name = util::unquote_ident(col_name);
             for relation in from_relations {
                 if let Some(relation_name) = &relation.0 {
                     if &prefixed == relation_name {

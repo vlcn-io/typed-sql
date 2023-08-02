@@ -61,11 +61,17 @@ export default class Analyzer {
         // If we run into issues we can use `ts-patch` and do this as a proper transformer.
         // Then apply collected fixes.
         for (const file of program.getSourceFiles()) {
+          if (shouldIgnoreFile(file)) {
+            continue;
+          }
           new FileVisitor(this.schemaCache, this.dag, file).visitSchemaDefs(
             checker
           );
         }
         for (const file of program.getSourceFiles()) {
+          if (shouldIgnoreFile(file)) {
+            continue;
+          }
           new FileVisitor(this.schemaCache, this.dag, file).visitQueryDefs(
             checker
           );
@@ -79,7 +85,10 @@ export default class Analyzer {
           (affected = program.getSemanticDiagnosticsOfNextAffectedFile())
         ) {
           const affectedFile = affected.affected as ts.SourceFile;
-          console.log("Affected: " + affectedFile?.getSourceFile()?.fileName);
+          if (shouldIgnoreFile(affectedFile)) {
+            continue;
+          }
+          console.log("Affected: " + affectedFile.fileName);
           new FileVisitor(this.schemaCache, this.dag, affectedFile).visitAll(
             checker
           );
@@ -101,4 +110,8 @@ export default class Analyzer {
 
     ts.createWatchProgram(host);
   }
+}
+
+function shouldIgnoreFile(file: ts.SourceFile) {
+  return file.fileName.includes("node_modules/");
 }

@@ -6,6 +6,7 @@ use sqlite3_parser::{
 };
 
 use crate::types::*;
+use crate::util;
 
 pub fn get_relation_shapes(ddl: String) -> Result<Vec<NamedRelation>, Error> {
     let mut parser = Parser::new(ddl.as_bytes());
@@ -28,7 +29,7 @@ pub fn get_relation_shapes(ddl: String) -> Result<Vec<NamedRelation>, Error> {
 fn maybe_record(stmt: Stmt) -> Result<Option<NamedRelation>, String> {
     match stmt {
         Stmt::CreateTable { tbl_name, body, .. } => Ok(Some((
-            format!("main.{}", tbl_name.name.0),
+            format!("main.{}", util::unquote_ident(&tbl_name.name.0)),
             get_properties(body)?,
         ))),
         _ => Ok(None),
@@ -66,5 +67,8 @@ fn column_as_property(column: ColumnDefinition) -> Col {
         // no not null constraint
         col_type.extend(builtin_type(BuiltinType::Null))
     }
-    (column.col_name.0, col_type)
+    (
+        util::unquote_ident(&column.col_name.0).to_string(),
+        col_type,
+    )
 }

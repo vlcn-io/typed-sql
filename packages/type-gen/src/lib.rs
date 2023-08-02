@@ -2,6 +2,7 @@ mod ddl;
 mod error;
 mod queries;
 mod types;
+mod util;
 
 use crate::error::Error;
 use std::collections::HashMap;

@@ -97,10 +97,10 @@ export default class SchemaTypeBuilder {
       .map(([key, value]) => {
         return `${key}: ${value}`;
       })
-      .join(";\n    ")}
+      .join(",\n    ")}
   }`;
     })
-    .join(";\n  ")}
+    .join(",\n  ")}
 }>`;
     } catch (e: any) {
       return `<{/*
