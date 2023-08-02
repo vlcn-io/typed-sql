@@ -1,13 +1,10 @@
 import {
   parseDdlRelations,
   getDdlRelations,
-  getQueryRelations,
-  parseQueryRelations,
 } from "@vlcn.io/type-gen-ts-adapter";
 import { getChildren, normalize, trimTag } from "../util.js";
 import ts from "typescript";
 import SchemaCache from "../SchemaCache.js";
-import DependencyGraph from "../DependencyGraph.js";
 import { Fix } from "./types.js";
 
 export default class SchemaTypeBuilder {
@@ -89,19 +86,19 @@ export default class SchemaTypeBuilder {
   ): string {
     try {
       const recordTypes = parseDdlRelations(relations);
-      return `<{
+      return `<Readonly<{
   ${Object.entries(recordTypes)
     .map(([key, value]) => {
-      return `${key.replace("main.", "")}: {
+      return `${key.replace("main.", "")}: Readonly<{
     ${Object.entries(value)
       .map(([key, value]) => {
         return `${key}: ${value}`;
       })
-      .join(",\n    ")}
-  }`;
+      .join(";\n    ")}
+  }>`;
     })
-    .join(",\n  ")}
-}>`;
+    .join(";\n  ")}
+}>>`;
     } catch (e: any) {
       return `<{/*
   ${e.message}

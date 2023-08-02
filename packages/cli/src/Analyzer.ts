@@ -51,7 +51,6 @@ export default class Analyzer {
 
     let isCold = true;
     host.afterProgramCreate = (program) => {
-      console.log("prog create");
       const checker = program.getProgram().getTypeChecker();
 
       if (isCold) {
@@ -64,6 +63,7 @@ export default class Analyzer {
           if (shouldIgnoreFile(file)) {
             continue;
           }
+          console.log("visiting " + file.fileName);
           new FileVisitor(this.schemaCache, this.dag, file).visitSchemaDefs(
             checker
           );
@@ -93,7 +93,6 @@ export default class Analyzer {
             checker
           );
           const children = this.dag.getDependents(affectedFile.fileName);
-          console.log(children);
           for (const child of children) {
             const childFile = program.getSourceFile(child);
             // schemas can't rely on schemas so this should be fine.
