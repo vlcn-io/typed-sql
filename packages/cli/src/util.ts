@@ -10,7 +10,7 @@ export function getChildren(node: ts.Node): ts.Node[] {
 
 export function normalize(val: string) {
   // must replace with empty strings otherwise a difference in the _number_ of `;` or ` ` will create a difference in the noramlized strings
-  return val.replace(/\s/g, "").replace(/,|;/g, "");
+  return val.replace(/\s|,|;/g, "").replace(/'|"/g, "'");
 }
 
 export function trimTag(tag: string) {

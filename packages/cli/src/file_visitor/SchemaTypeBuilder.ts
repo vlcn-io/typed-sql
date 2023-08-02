@@ -65,6 +65,8 @@ export default class SchemaTypeBuilder {
         );
 
         const replacement = this.genRecordShapeCode(schemaRelations);
+        // console.log(existingContent);
+        // console.log(normalize(replacement));
         if (existingContent == normalize(replacement)) {
           return null;
         }
