@@ -18,8 +18,11 @@ type SchemaType<TSchema> = {
 export type Result<P> = P extends Query<infer T> ? T : never;
 export type Results<P> = P extends Query<infer T> ? T[] : never;
 export type Query<T> = Opaque<string, T>;
-export type Record<P> = P extends SchemaType<infer T> ? T : never;
-export type Records<P> = P extends SchemaType<infer T> ? T[] : never;
+export type Record<
+  P,
+  K extends P extends SchemaType<infer T> ? keyof T : never
+> = P extends SchemaType<infer T> ? T[K extends keyof T ? K : never] : never;
+export type Records<P> = P extends SchemaType<infer T> ? T : never;
 export function schema<TSchema>(
   strings: TemplateStringsArray,
   ...values: any[]
