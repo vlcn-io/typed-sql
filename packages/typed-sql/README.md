@@ -31,13 +31,16 @@ The codegen plugin picks up on use of this template to generate types that match
 
 # Utility Types
 
-## RecordTypes
+## `Record` and `Records` types
 
 ```ts
-type Records = RecordTypes<typeof MySchema>;
+type MySchemaRecord = Record<typeof MySchema>;
+type MySchemaRecords = Records<typeof MySchema>;
 ```
 
 Extracts the generic type of `MySchema` into a top-level type for you to work with.
+
+`Record` refers to a single table row, while `Records` refers to an array of table rows.
 
 E.g.,
 
@@ -47,16 +50,18 @@ CREATE TABLE foo (a, b);
 CREATE TABLE bar (b, c);
 `;
 
-type Records = RecordTypes<typeof MySchema>;
+type MySchemaRecords = Records<typeof MySchema>;
 
-function fooProcessor(foos: Records['foo'][]) {
+function fooProcessor(foos: MySchemaRecords['foo']) {
   ...
 }
 ```
 
-## ResultType
+## `Result` and `Results` types
 
 Extracts the generic type of a query into a top-level type for you to work with.
+
+`Result` refers to a single result row, while `Results` refers to an array of result rows.
 
 ```ts
 const query = MySchema.sql<..generated..>`SELECT a, c FROM foo JOIN bar`;
@@ -65,7 +70,7 @@ function execute<T>(query: Query<T>): T {
   return db.execute(query) as T;
 }
 
-function someMethod(input: ResultType<typeof query>) {
+function someMethod(input: Result<typeof query>) {
   ...
 }
 

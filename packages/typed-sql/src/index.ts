@@ -15,9 +15,11 @@ type SchemaType<TSchema> = {
   __type: TSchema;
 };
 
-export type ExtractResultType<P> = P extends Query<infer T> ? T : never;
+export type Result<P> = P extends Query<infer T> ? T : never;
+export type Results<P> = P extends Query<infer T> ? T[] : never;
 export type Query<T> = Opaque<string, T>;
-export type RecordTypes<P> = P extends SchemaType<infer T> ? T : never;
+export type Record<P> = P extends SchemaType<infer T> ? T : never;
+export type Records<P> = P extends SchemaType<infer T> ? T[] : never;
 export function schema<TSchema>(
   strings: TemplateStringsArray,
   ...values: any[]
@@ -43,7 +45,7 @@ function processTemplateStrings(strings: TemplateStringsArray, values: any[]) {
 /*
 
 const getTasks = MyApp.sql<{
-  
+
 }>`SELECT * FROM task WHERE owner_id = ?`;
 
 CREATE TABLE task (
