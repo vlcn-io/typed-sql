@@ -1,5 +1,11 @@
 # @vlcn.io/typed-sql
 
+## 0.2.7-next.0
+
+### Patch Changes
+
+- update react hooks to accept typed-sql typings
+
 ## 0.2.6
 
 ### Patch Changes
