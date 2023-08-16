@@ -1,5 +1,11 @@
 # @vlcn.io/typed-sql
 
+## 0.2.5
+
+### Patch Changes
+
+- normalize column names to strip quotes
+
 ## 0.2.4
 
 ### Patch Changes

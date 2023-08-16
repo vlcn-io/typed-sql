@@ -88,10 +88,10 @@ export default class SchemaTypeBuilder {
   ): string {
     try {
       const recordTypes = parseDdlRelations(relations);
-      return `<Readonly<{
+      return `<{
   ${Object.entries(recordTypes)
     .map(([key, value]) => {
-      return `${key.replace("main.", "")}: Readonly<{
+      return `readonly ${key.replace("main.", "")}: Readonly<{
     ${Object.entries(value)
       .map(([key, value]) => {
         return `${key}: ${value}`;
@@ -100,7 +100,7 @@ export default class SchemaTypeBuilder {
   }>`;
     })
     .join(";\n  ")}
-}>>`;
+}>`;
     } catch (e: any) {
       return `<{/*
   ${e.message}

@@ -58,6 +58,10 @@ export default class SchemaCache {
     // building all the relations it declares.
     this.map.delete(fileName);
   }
+
+  log() {
+    console.log(this.map);
+  }
 }
 
 function hash(s: string): string {

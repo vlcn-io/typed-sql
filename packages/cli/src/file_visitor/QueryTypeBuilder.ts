@@ -123,7 +123,7 @@ export default class QueryTypeBuilder {
     }
     const internalType = checker.getTypeOfSymbol(prop);
     // console.log(internalType.getSymbol()?.declarations);
-    // const internalProps = checker.getPropertiesOfType(internalType);
+    const internalProps = checker.getPropertiesOfType(internalType);
 
     const decl = internalType.getSymbol()?.declarations?.[0];
 
@@ -132,7 +132,7 @@ export default class QueryTypeBuilder {
         schemaNode.getStart()
       );
       throw new Error(
-        `Could not find the referenced schema typescript type! Is it defined?`
+        `Could not find the referenced schema typescript type! Is it defined? ${this.sourceFile.fileName}:${loc.line}:${loc.character}`
       );
     }
 
@@ -158,8 +158,9 @@ export default class QueryTypeBuilder {
       const loc = this.sourceFile.getLineAndCharacterOfPosition(
         schemaNode.getStart()
       );
+
       throw new Error(
-        `Could not find the referenced schema relations! Are they defined?`
+        `Could not find the referenced schema relations! Are they defined? ${this.sourceFile.fileName}:${loc.line}:${loc.character}}`
       );
     }
 

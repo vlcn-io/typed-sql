@@ -1,5 +1,13 @@
 # @vlcn.io/type-gen-ts-adapter
 
+## 0.2.5
+
+### Patch Changes
+
+- normalize column names to strip quotes
+- Updated dependencies
+  - typed-sql-type-gen@0.1.1
+
 ## 0.2.4
 
 ### Patch Changes
