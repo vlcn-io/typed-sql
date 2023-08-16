@@ -1,5 +1,11 @@
 # @vlcn.io/typed-sql
 
+## 0.2.6
+
+### Patch Changes
+
+- fix broken package
+
 ## 0.2.5
 
 ### Patch Changes
