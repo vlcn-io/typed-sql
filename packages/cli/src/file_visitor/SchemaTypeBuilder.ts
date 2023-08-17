@@ -71,9 +71,9 @@ export default class SchemaTypeBuilder {
           return null;
         }
         // const pos = this.sourceFile.getLineAndCharacterOfPosition(range[0]);
-        return [range, replacement];
+        return { _tag: "InlineFix", range, replacement };
       } catch (e: any) {
-        return [range, `<{/*${e}*/}>`];
+        return { _tag: "InlineFix", range, replacement: `<{/*${e}*/}>` };
       }
     }
 
