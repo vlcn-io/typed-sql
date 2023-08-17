@@ -93,14 +93,29 @@ export default class FileVisitor {
       return;
     }
     let offset = 0;
-    for (const [range, replacement] of fixes) {
-      const text = this.sourceFile.getFullText();
-      const updatedText = replaceRange(text, range[0], range[1], replacement);
+    for (const fix of fixes) {
+      switch (fix._tag) {
+        case "InlineFix": {
+          const { range, replacement } = fix;
+          const text = this.sourceFile.getFullText();
+          const updatedText = replaceRange(
+            text,
+            range[0],
+            range[1],
+            replacement
+          );
 
-      // if replacement is _longer_ than what was replaced then all other replacements shift further away
-      // if replacement is _shorter_ then they shift closer
-      offset += replacement.length - (range[1] - range[0]);
-      fs.writeFileSync(this.sourceFile.fileName, updatedText);
+          // if replacement is _longer_ than what was replaced then all other replacements shift further away
+          // if replacement is _shorter_ then they shift closer
+          offset += replacement.length - (range[1] - range[0]);
+          fs.writeFileSync(this.sourceFile.fileName, updatedText);
+          break;
+        }
+        case "CompanionFileFix": {
+          // write the companion file
+          fs.writeFileSync(fix.path, fix.content);
+        }
+      }
     }
   }
 
