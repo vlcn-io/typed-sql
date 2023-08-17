@@ -8,6 +8,10 @@ ALPHA release. In theory this covers all of SQLite. In practice, I have written 
 
 Documented issues: https://github.com/vlcn-io/typed-sql/issues
 
+# Install and Usage Video
+
+https://www.youtube.com/watch?v=avGari4souM&feature=youtu.be
+
 # Installation
 
 Types are generated via a watch task installed with `@vlcn.io/typed-sql-cli`.
