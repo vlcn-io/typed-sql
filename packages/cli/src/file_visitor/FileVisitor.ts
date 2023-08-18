@@ -30,8 +30,8 @@ import ts from "typescript";
 import SchemaTypeBuilder from "./SchemaTypeBuilder.js";
 import DependencyGraph from "../DependencyGraph.js";
 import QueryTypeBuilder from "./QueryTypeBuilder.js";
-import { Fix } from "./types.js";
-import { replaceRange } from "../util.js";
+import { CompanionFileFix, Fix } from "./types.js";
+import { normalize, replaceRange } from "../util.js";
 import fs from "fs";
 
 /**
@@ -113,10 +113,22 @@ export default class FileVisitor {
         }
         case "CompanionFileFix": {
           // write the companion file
-          fs.writeFileSync(fix.path, fix.content);
+          this.#writeCompanionFile(fix);
         }
       }
     }
+  }
+
+  // only write it if it differs from what is on disk after normalization
+  #writeCompanionFile(fix: CompanionFileFix) {
+    if (fs.existsSync(fix.path)) {
+      const existing = normalize(fs.readFileSync(fix.path, "utf-8"));
+      if (existing == normalize(fix.content)) {
+        console.log(`No difference for companion file ${fix.path}`);
+        return;
+      }
+    }
+    fs.writeFileSync(fix.path, fix.content);
   }
 
   collectAllNodes(node: ts.Node, checker: ts.TypeChecker) {

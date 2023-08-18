@@ -22,7 +22,7 @@ import crypto from "crypto";
 export default class SchemaCache {
   private map = new Map<
     string,
-    Map<number, ReturnType<typeof getDdlRelations>>
+    Map<string, ReturnType<typeof getDdlRelations>>
   >();
   // cache on file name + schema content hash.
   // we can actually get the schema declaration in its entirity from a query site.
@@ -31,7 +31,7 @@ export default class SchemaCache {
   // fill in all schemas afterwards.
   get(
     fileName: string,
-    loc: number
+    loc: string
   ): ReturnType<typeof getDdlRelations> | null {
     const existing = this.map.get(fileName);
     if (!existing) {
@@ -42,7 +42,7 @@ export default class SchemaCache {
 
   cache(
     fileName: string,
-    loc: number,
+    loc: string,
     schema: ReturnType<typeof getDdlRelations>
   ) {
     let existing = this.map.get(fileName);

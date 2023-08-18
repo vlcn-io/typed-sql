@@ -156,7 +156,7 @@ export default class QueryTypeBuilder {
 
     const ret = this.schemaCache.get(
       decl.getSourceFile().fileName,
-      decl.getStart()
+      normalize(decl.getFullText())
     );
     if (!ret) {
       const loc = this.sourceFile.getLineAndCharacterOfPosition(
