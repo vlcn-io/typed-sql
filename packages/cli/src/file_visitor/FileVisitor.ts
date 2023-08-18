@@ -33,6 +33,7 @@ import QueryTypeBuilder from "./QueryTypeBuilder.js";
 import { CompanionFileFix, Fix } from "./types.js";
 import { normalize, replaceRange } from "../util.js";
 import fs from "fs";
+import { Options } from "../Analyzer.js";
 
 /**
  * The file visitor is ephemeral. Created each time we visit a file.
@@ -42,6 +43,7 @@ export default class FileVisitor {
   private schemaTemplates: ts.TaggedTemplateExpression[] = [];
 
   constructor(
+    private options: Options,
     private schemaCache: SchemaCache,
     private dag: DependencyGraph,
     private sourceFile: ts.SourceFile
@@ -52,6 +54,7 @@ export default class FileVisitor {
 
     this.collectAllNodes(this.sourceFile, checker);
     const schemaTypeBuilder = new SchemaTypeBuilder(
+      this.options,
       this.schemaCache,
       this.sourceFile
     );
@@ -70,6 +73,7 @@ export default class FileVisitor {
   visitSchemaDefs(checker: ts.TypeChecker) {
     this.collectSchemaNodes(this.sourceFile, checker);
     const schemaFixes = new SchemaTypeBuilder(
+      this.options,
       this.schemaCache,
       this.sourceFile
     ).buildResidentTypes(this.schemaTemplates);

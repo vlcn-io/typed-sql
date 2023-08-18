@@ -6,9 +6,11 @@ import { getChildren, normalize, trimTag } from "../util.js";
 import ts from "typescript";
 import SchemaCache from "../SchemaCache.js";
 import { Fix } from "./types.js";
+import { Options } from "../Analyzer.js";
 
 export default class SchemaTypeBuilder {
   constructor(
+    private options: Options,
     private schemaCache: SchemaCache,
     private sourceFile: ts.SourceFile
   ) {}
@@ -54,9 +56,8 @@ export default class SchemaTypeBuilder {
         existingContent = normalize(`<${maybeExistingNode.getText()}>`);
       }
       try {
-        const schemaRelations = getDdlRelations(
-          trimTag(templateStringNode.getText())
-        );
+        const rawSchemaText = trimTag(templateStringNode.getText());
+        const schemaRelations = getDdlRelations(rawSchemaText);
 
         const untaggedReplacement = this.genRecordShapeCode(schemaRelations);
         const normalizedUntaggedReplacement = normalize(untaggedReplacement);
@@ -74,9 +75,17 @@ export default class SchemaTypeBuilder {
           return [];
         }
         // const pos = this.sourceFile.getLineAndCharacterOfPosition(range[0]);
-        return [
+        const ret: Fix[] = [
           { _tag: "InlineFix", range, replacement: `<${untaggedReplacement}>` },
         ];
+        if (this.options.createSqlFiles) {
+          ret.push({
+            _tag: "CompanionFileFix",
+            path: file.fileName.replace(/\.ts$/, ".sql"),
+            content: rawSchemaText,
+          });
+        }
+        return ret;
       } catch (e: any) {
         return [{ _tag: "InlineFix", range, replacement: `<{/*${e}*/}>` }];
       }

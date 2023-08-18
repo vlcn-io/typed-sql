@@ -11,11 +11,17 @@ program.option(
   "-t, --tsconfig <name>",
   "_name_ of your tsconfig file. Defaults to tsconfig.json"
 );
+program.option("-s, --sql", "create SQL files from TypeScript schemas");
 
 program.parse();
 
 const options = program.opts();
 const projectPath = options.project;
+const createSqlFiles = !!options.sql;
 const tsconfig = options.tsconfig;
 
-new Analyzer(projectPath, tsconfig || "tsconfig.json").start();
+new Analyzer(
+  { createSqlFiles },
+  projectPath,
+  tsconfig || "tsconfig.json"
+).start();

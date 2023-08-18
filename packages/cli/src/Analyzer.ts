@@ -3,11 +3,19 @@ import SchemaCache from "./SchemaCache.js";
 import FileVisitor from "./file_visitor/FileVisitor.js";
 import DependencyGraph from "./DependencyGraph.js";
 
+export type Options = {
+  createSqlFiles: boolean;
+};
+
 export default class Analyzer {
   // The schema cache and dag are stateful given the analyzer will watch a folder for file modifications.
   private schemaCache = new SchemaCache();
   private dag = new DependencyGraph();
-  constructor(private projectDir: string, private tsConfigName: string) {}
+  constructor(
+    private options: Options,
+    private projectDir: string,
+    private tsConfigName: string
+  ) {}
 
   start() {
     const configPath = ts.findConfigFile(
@@ -54,7 +62,7 @@ export default class Analyzer {
       const checker = program.getProgram().getTypeChecker();
 
       if (isCold) {
-        // process the entire repo.
+        // process the entire repo on initial startup.
         // First for schema defs (& apply fixes so presumably we're atomic?)
         // Then for query defs (& apply those fixes? will ts have re-read things? what if someone edits while we're updating?)
         // If we run into issues we can use `ts-patch` and do this as a proper transformer.
@@ -64,17 +72,23 @@ export default class Analyzer {
             continue;
           }
           console.log("visiting " + file.fileName);
-          new FileVisitor(this.schemaCache, this.dag, file).visitSchemaDefs(
-            checker
-          );
+          new FileVisitor(
+            this.options,
+            this.schemaCache,
+            this.dag,
+            file
+          ).visitSchemaDefs(checker);
         }
         for (const file of program.getSourceFiles()) {
           if (shouldIgnoreFile(file)) {
             continue;
           }
-          new FileVisitor(this.schemaCache, this.dag, file).visitQueryDefs(
-            checker
-          );
+          new FileVisitor(
+            this.options,
+            this.schemaCache,
+            this.dag,
+            file
+          ).visitQueryDefs(checker);
         }
         isCold = false;
       } else {
@@ -89,17 +103,23 @@ export default class Analyzer {
             continue;
           }
           console.log("Affected: " + affectedFile.fileName);
-          new FileVisitor(this.schemaCache, this.dag, affectedFile).visitAll(
-            checker
-          );
+          new FileVisitor(
+            this.options,
+            this.schemaCache,
+            this.dag,
+            affectedFile
+          ).visitAll(checker);
           const children = this.dag.getDependents(affectedFile.fileName);
           for (const child of children) {
             const childFile = program.getSourceFile(child);
             // schemas can't rely on schemas so this should be fine.
             // well.. they could if you allow select statements in schemas that select from attached databases 🤣
-            new FileVisitor(this.schemaCache, this.dag, childFile!).visitAll(
-              checker
-            );
+            new FileVisitor(
+              this.options,
+              this.schemaCache,
+              this.dag,
+              childFile!
+            ).visitAll(checker);
           }
           // no consult the dag for anyone who depends on this file and analyze them too.
           // we can use `program.getSourceFile` or whatever to do this.
