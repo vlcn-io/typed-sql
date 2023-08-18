@@ -44,7 +44,7 @@ export function parseDdlRelations(rawRelations: NamedRelation[]): {
 } {
   const ret: { [key: string]: ParsedRelation } = {};
   for (const relation of rawRelations) {
-    ret[relation[0]] = parseRelation(relation);
+    ret[relation[0]] = parseRelation(relation, true);
   }
   return ret;
 }
@@ -62,19 +62,25 @@ export function parseQueryRelations(relations: Relation[]): ParsedRelation[] {
   return relations.map((r) => parseRelation(r));
 }
 
-function parseRelation(relation: Relation): ParsedRelation {
+function parseRelation(
+  relation: Relation,
+  ddl: boolean = false
+): ParsedRelation {
   const ret: ParsedRelation = {};
   for (const col of relation[1]) {
-    ret[col[0]] = colTypeToTsTypeString(col[1]);
+    ret[col[0]] = colTypeToTsTypeString(col[1], ddl);
   }
   return ret;
 }
 
-function colTypeToTsTypeString(col: ColType): string {
-  return col.map((t) => colTypePartToTsType(t)).join(" | ");
+function colTypeToTsTypeString(col: ColType, ddl: boolean): string {
+  return col.map((t) => colTypePartToTsType(t, ddl)).join(" | ");
 }
 
-function colTypePartToTsType([kind, builtin, str]: ColType[number]): string {
+function colTypePartToTsType(
+  [kind, builtin, str]: ColType[number],
+  ddl: boolean
+): string {
   switch (kind) {
     case "Literal": {
       switch (builtin) {
@@ -143,7 +149,8 @@ function colTypePartToTsType([kind, builtin, str]: ColType[number]): string {
       }
     }
     case "Custom": {
-      return str;
+      // return str;
+      return str.substring(1, str.length - 1);
     }
     case "Unresolved": {
       return "unknown";

@@ -1,12 +1,6 @@
 
 CREATE TABLE city (
-  id INTEGER PRIMARY KEY NOT NULL,
+  id 'ID_of<indexType["city"]>' PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
-  lat FLOAT NOT NULL,
-  long FLOAT NOT NULL
+  lat FLOAT NOT NULL
 );
-CREATE TABLE place (
-  id INTEGER PRIMARY KEY NOT NULL,
-  name TEXT NOT NULL,
-  city_id INTEGER NOT NULL
-)

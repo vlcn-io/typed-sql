@@ -1,13 +1,7 @@
 export type indexType = {
   readonly city: Readonly<{
-    id: number;
+    id: ID_of<indexType["city"]>;
     name: string;
-    lat: number;
-    long: number
-  }>;
-  readonly place: Readonly<{
-    id: number;
-    name: string;
-    city_id: number
+    lat: number
   }>
 };
