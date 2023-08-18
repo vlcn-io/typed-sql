@@ -1,16 +1,16 @@
 import { schema } from "@vlcn.io/typed-sql";
 
 export const MyApp = schema<{
-  user: {
+  readonly user: Readonly<{
     id: number;
     name: string
-  };
-  task: {
+  }>;
+  readonly task: Readonly<{
     id: number;
     what: string;
     owner_id: number;
     list_id: number | null
-  }
+  }>
 }>`
 CREATE TABLE user (id INTEGER PRIMARY KEY NOT NULL, name TEXT NOT NULL);
 CREATE TABLE task (

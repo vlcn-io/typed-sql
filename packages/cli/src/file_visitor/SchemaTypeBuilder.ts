@@ -27,9 +27,9 @@ export default class SchemaTypeBuilder {
 
     // process templates
     for (const def of schemaDefinitions) {
-      const maybeFix = this.processDeclareSchemaTemplate(this.sourceFile, def);
-      if (maybeFix) {
-        fixes.push(maybeFix);
+      const fix = this.processDeclareSchemaTemplate(this.sourceFile, def);
+      for (const f of fix) {
+        fixes.push(f);
       }
     }
 
@@ -39,7 +39,7 @@ export default class SchemaTypeBuilder {
   private processDeclareSchemaTemplate(
     file: ts.SourceFile,
     node: ts.TaggedTemplateExpression
-  ): Fix | null {
+  ): Fix[] {
     const children = getChildren(node);
     const templateStringNode = children[children.length - 1];
     const maybeExistingNode = children[1];
@@ -58,22 +58,27 @@ export default class SchemaTypeBuilder {
           trimTag(templateStringNode.getText())
         );
 
+        const untaggedReplacement = this.genRecordShapeCode(schemaRelations);
+        const normalizedUntaggedReplacement = normalize(untaggedReplacement);
+
         this.schemaCache.cache(
           file.fileName,
-          schemaAccessNode.getEnd() + 1,
+          normalizedUntaggedReplacement,
           schemaRelations
         );
+        const normalizedReplacement = `<${normalizedUntaggedReplacement}>`;
 
-        const replacement = this.genRecordShapeCode(schemaRelations);
         // console.log(existingContent);
         // console.log(normalize(replacement));
-        if (existingContent == normalize(replacement)) {
-          return null;
+        if (existingContent == normalizedReplacement) {
+          return [];
         }
         // const pos = this.sourceFile.getLineAndCharacterOfPosition(range[0]);
-        return { _tag: "InlineFix", range, replacement };
+        return [
+          { _tag: "InlineFix", range, replacement: `<${untaggedReplacement}>` },
+        ];
       } catch (e: any) {
-        return { _tag: "InlineFix", range, replacement: `<{/*${e}*/}>` };
+        return [{ _tag: "InlineFix", range, replacement: `<{/*${e}*/}>` }];
       }
     }
 
@@ -88,7 +93,7 @@ export default class SchemaTypeBuilder {
   ): string {
     try {
       const recordTypes = parseDdlRelations(relations);
-      return `<{
+      return `{
   ${Object.entries(recordTypes)
     .map(([key, value]) => {
       return `readonly ${key.replace("main.", "")}: Readonly<{
@@ -100,11 +105,11 @@ export default class SchemaTypeBuilder {
   }>`;
     })
     .join(";\n  ")}
-}>`;
+}`;
     } catch (e: any) {
-      return `<{/*
+      return `{/*
   ${e.message}
-*/}>` as string;
+*/}` as string;
     }
   }
 }
