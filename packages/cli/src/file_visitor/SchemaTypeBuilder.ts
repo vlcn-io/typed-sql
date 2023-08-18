@@ -7,6 +7,7 @@ import ts from "typescript";
 import SchemaCache from "../SchemaCache.js";
 import { Fix } from "./types.js";
 import { Options } from "../Analyzer.js";
+import path from "path";
 
 export default class SchemaTypeBuilder {
   constructor(
@@ -62,22 +63,47 @@ export default class SchemaTypeBuilder {
         const untaggedReplacement = this.genRecordShapeCode(schemaRelations);
         const normalizedUntaggedReplacement = normalize(untaggedReplacement);
 
-        this.schemaCache.cache(
-          file.fileName,
-          normalizedUntaggedReplacement,
-          schemaRelations
-        );
-        const normalizedReplacement = `<${normalizedUntaggedReplacement}>`;
-
-        // console.log(existingContent);
-        // console.log(normalize(replacement));
-        if (existingContent == normalizedReplacement) {
-          return [];
+        const ret: Fix[] = [];
+        if (this.options.schemaTyping === "inline") {
+          this.schemaCache.cache(
+            file.fileName,
+            normalizedUntaggedReplacement,
+            schemaRelations
+          );
+          const normalizedReplacement = `<${normalizedUntaggedReplacement}>`;
+          if (existingContent == normalizedReplacement) {
+            return [];
+          }
+          // const pos = this.sourceFile.getLineAndCharacterOfPosition(range[0]);
+          ret.push({
+            _tag: "InlineFix",
+            range,
+            replacement: `<${untaggedReplacement}>`,
+          });
+        } else {
+          const typepath = file.fileName.replace(/\.ts$/, "Type.ts");
+          this.schemaCache.cache(
+            typepath,
+            normalizedUntaggedReplacement,
+            schemaRelations
+          );
+          const basename = path.basename(file.fileName, ".ts");
+          const typename = basename + "Type";
+          ret.push({
+            _tag: "CompanionFileFix",
+            path: typepath,
+            content: `export type ${typename} = ${untaggedReplacement};`,
+          });
+          const generic = `<${typename}>`;
+          if (existingContent !== generic) {
+            ret.push({
+              _tag: "InlineFix",
+              range,
+              replacement: generic,
+            });
+          }
         }
-        // const pos = this.sourceFile.getLineAndCharacterOfPosition(range[0]);
-        const ret: Fix[] = [
-          { _tag: "InlineFix", range, replacement: `<${untaggedReplacement}>` },
-        ];
+
         if (this.options.createSqlFiles) {
           ret.push({
             _tag: "CompanionFileFix",

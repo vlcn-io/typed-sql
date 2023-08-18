@@ -1,18 +1,7 @@
 import { schema } from "@vlcn.io/typed-sql";
+import { indexType } from "./indexType.js";
 
-const App = schema<{
-  readonly city: Readonly<{
-    id: number;
-    name: string;
-    lat: number;
-    long: number
-  }>;
-  readonly place: Readonly<{
-    id: number;
-    name: string;
-    city_id: number
-  }>
-}>`
+const App = schema<indexType>`
 CREATE TABLE city (
   id INTEGER PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,

@@ -1,17 +1,7 @@
 import { schema } from "@vlcn.io/typed-sql";
+import { schemasType } from "./schemasType.js";
 
-export const MyApp = schema<{
-  readonly user: Readonly<{
-    id: number;
-    name: string
-  }>;
-  readonly task: Readonly<{
-    id: number;
-    what: string;
-    owner_id: number;
-    list_id: number | null
-  }>
-}>`
+export const MyApp = schema<schemasType>`
 CREATE TABLE user (id INTEGER PRIMARY KEY NOT NULL, name TEXT NOT NULL);
 CREATE TABLE task (
   id INTEGER PRIMARY KEY NOT NULL,

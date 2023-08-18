@@ -5,6 +5,7 @@ import DependencyGraph from "./DependencyGraph.js";
 
 export type Options = {
   createSqlFiles: boolean;
+  schemaTyping: "parallel" | "inline";
 };
 
 export default class Analyzer {
