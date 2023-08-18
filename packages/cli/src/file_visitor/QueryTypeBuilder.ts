@@ -66,6 +66,11 @@ export default class QueryTypeBuilder {
         // const pos = this.sourceFile.getLineAndCharacterOfPosition(range[0]);
         return { _tag: "InlineFix", range, replacement };
       } catch (e: any) {
+        const existingContent = normalize(`<${maybeExistingNode.getText()}>`);
+        const newContent = normalize(`<{/*${e.message}*/}>`);
+        if (existingContent == newContent) {
+          return null;
+        }
         return {
           _tag: "InlineFix",
           range,

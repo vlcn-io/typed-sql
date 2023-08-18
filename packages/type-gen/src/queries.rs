@@ -531,10 +531,10 @@ fn maybe_aliased_table_to_relation(
     }
 }
 
-fn extract_alias(as_: &As) -> &String {
+fn extract_alias(as_: &As) -> &str {
     match as_ {
-        As::As(n) => &n.0,
-        As::Elided(n) => &n.0,
+        As::As(n) => util::unquote_ident(&n.0),
+        As::Elided(n) => util::unquote_ident(&n.0),
     }
 }
 

@@ -97,6 +97,7 @@ export default class FileVisitor {
       return;
     }
     let offset = 0;
+    console.log("Applying fix to " + this.sourceFile.fileName);
     for (const fix of fixes) {
       switch (fix._tag) {
         case "InlineFix": {

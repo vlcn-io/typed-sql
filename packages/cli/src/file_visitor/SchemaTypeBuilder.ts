@@ -122,6 +122,11 @@ export default class SchemaTypeBuilder {
         }
         return ret;
       } catch (e: any) {
+        const existingContent = normalize(`<${maybeExistingNode.getText()}>`);
+        const newContent = normalize(`<{/*${e}*/}>`);
+        if (existingContent == newContent) {
+          return [];
+        }
         return [{ _tag: "InlineFix", range, replacement: `<{/*${e}*/}>` }];
       }
     }
