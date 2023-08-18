@@ -1,5 +1,5 @@
+import { indexType } from "./indexType.js"
 import { schema } from "@vlcn.io/typed-sql";
-import { indexType } from "./indexType.js";
 
 const App = schema<indexType>`
 CREATE TABLE city (

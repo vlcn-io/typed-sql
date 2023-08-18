@@ -11,5 +11,6 @@ export type InlineFix = {
 export type CompanionFileFix = {
   _tag: "CompanionFileFix";
   path: string;
+  placeAfter?: string;
   content: string;
 };

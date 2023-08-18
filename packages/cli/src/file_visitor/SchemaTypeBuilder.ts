@@ -52,9 +52,9 @@ export default class SchemaTypeBuilder {
       templateStringNode.getStart(),
     ];
     if (ts.isTemplateLiteral(templateStringNode)) {
-      let existingContent = "";
+      let existingGeneric = "";
       if (maybeExistingNode != templateStringNode) {
-        existingContent = normalize(`<${maybeExistingNode.getText()}>`);
+        existingGeneric = normalize(`<${maybeExistingNode.getText()}>`);
       }
       try {
         const rawSchemaText = trimTag(templateStringNode.getText());
@@ -71,7 +71,7 @@ export default class SchemaTypeBuilder {
             schemaRelations
           );
           const normalizedReplacement = `<${normalizedUntaggedReplacement}>`;
-          if (existingContent == normalizedReplacement) {
+          if (existingGeneric == normalizedReplacement) {
             return [];
           }
           // const pos = this.sourceFile.getLineAndCharacterOfPosition(range[0]);
@@ -92,14 +92,23 @@ export default class SchemaTypeBuilder {
           ret.push({
             _tag: "CompanionFileFix",
             path: typepath,
+            placeAfter: `// === custom code above this line ===`,
             content: `export type ${typename} = ${untaggedReplacement};`,
           });
-          const generic = `<${typename}>`;
-          if (existingContent !== generic) {
+          const newGeneric = `<${typename}>`;
+          if (existingGeneric !== newGeneric) {
             ret.push({
               _tag: "InlineFix",
               range,
-              replacement: generic,
+              replacement: newGeneric,
+            });
+          }
+          const importFrom = `./${typename}.js`;
+          if (!file.getFullText().includes(importFrom)) {
+            ret.push({
+              _tag: "InlineFix",
+              range: [0, 0],
+              replacement: `import { ${typename} } from "${importFrom}"\n`,
             });
           }
         }
