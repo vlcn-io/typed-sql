@@ -1,5 +1,13 @@
 # @vlcn.io/type-gen-ts-adapter
 
+## 0.2.8
+
+### Patch Changes
+
+- fix infinite loop in error conditions
+- Updated dependencies
+  - typed-sql-type-gen@0.1.1
+
 ## 0.2.7-next.0
 
 ### Patch Changes

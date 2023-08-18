@@ -1,5 +1,13 @@
 # @vlcn.io/typed-sql-cli
 
+## 0.2.8
+
+### Patch Changes
+
+- fix infinite loop in error conditions
+- Updated dependencies
+  - @vlcn.io/type-gen-ts-adapter@0.2.8
+
 ## 0.2.7-next.0
 
 ### Patch Changes

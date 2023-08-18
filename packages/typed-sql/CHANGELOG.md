@@ -1,5 +1,11 @@
 # @vlcn.io/typed-sql
 
+## 0.2.8
+
+### Patch Changes
+
+- fix infinite loop in error conditions
+
 ## 0.2.7-next.1
 
 ### Patch Changes
