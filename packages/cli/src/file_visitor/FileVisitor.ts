@@ -125,14 +125,24 @@ export default class FileVisitor {
 
   // only write it if it differs from what is on disk after normalization
   #writeCompanionFile(fix: CompanionFileFix) {
+    let prefix = fix.placeAfter ?? "";
     if (fs.existsSync(fix.path)) {
-      const existing = normalize(fs.readFileSync(fix.path, "utf-8"));
-      if (existing == normalize(fix.content)) {
+      let existing = fs.readFileSync(fix.path, "utf-8");
+      let placeAfterEnd = 0;
+      if (fix.placeAfter != null) {
+        const placeAfterStart = existing.indexOf(fix.placeAfter);
+        if (placeAfterStart != -1) {
+          placeAfterEnd = placeAfterStart + fix.placeAfter.length;
+          prefix = existing.substring(0, placeAfterEnd);
+          existing = existing.substring(placeAfterEnd);
+        }
+      }
+      if (normalize(existing) == normalize(fix.content)) {
         console.log(`No difference for companion file ${fix.path}`);
         return;
       }
     }
-    fs.writeFileSync(fix.path, fix.content);
+    fs.writeFileSync(fix.path, prefix + fix.content);
   }
 
   collectAllNodes(node: ts.Node, checker: ts.TypeChecker) {

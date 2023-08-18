@@ -92,7 +92,7 @@ export default class SchemaTypeBuilder {
           ret.push({
             _tag: "CompanionFileFix",
             path: typepath,
-            placeAfter: `// === custom code above this line ===`,
+            placeAfter: `// === custom code above this line ===\n`,
             content: `export type ${typename} = ${untaggedReplacement};`,
           });
           const newGeneric = `<${typename}>`;
