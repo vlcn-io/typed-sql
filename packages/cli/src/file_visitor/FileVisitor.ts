@@ -46,7 +46,7 @@ async function format(filePath: string, contents: string): Promise<string> {
   const hasPrettierSqlPlugin = Boolean(
     prettierOptions.plugins?.find((plugin) => {
       if (typeof plugin === "string") {
-        if (plugin.includes("sql")) {
+        if (plugin.toLowerCase().includes("sql")) {
           return true;
         }
       }
