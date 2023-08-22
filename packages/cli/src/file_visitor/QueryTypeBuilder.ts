@@ -96,7 +96,6 @@ export default class QueryTypeBuilder {
         getQueryRelations(query, schemaRelations)
       )[0];
 
-      // TODO: indent by original file indentation of surrounding context
       if (shape == null) {
         return `<unknown>`;
       } else {
