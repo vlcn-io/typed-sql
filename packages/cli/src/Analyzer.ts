@@ -18,7 +18,7 @@ export default class Analyzer {
     private tsConfigName: string
   ) {}
 
-  start() {
+  async start() {
     const configPath = ts.findConfigFile(
       this.projectDir,
       ts.sys.fileExists,
@@ -59,7 +59,7 @@ export default class Analyzer {
     );
 
     let isCold = true;
-    host.afterProgramCreate = (program) => {
+    host.afterProgramCreate = async (program) => {
       const checker = program.getProgram().getTypeChecker();
 
       if (isCold) {
@@ -73,23 +73,25 @@ export default class Analyzer {
             continue;
           }
           console.log("visiting " + file.fileName);
-          new FileVisitor(
+          const fileVisitor = new FileVisitor(
             this.options,
             this.schemaCache,
             this.dag,
             file
-          ).visitSchemaDefs(checker);
+          );
+          await fileVisitor.visitSchemaDefs(checker);
         }
         for (const file of program.getSourceFiles()) {
           if (shouldIgnoreFile(file)) {
             continue;
           }
-          new FileVisitor(
+          const fileVisitor = new FileVisitor(
             this.options,
             this.schemaCache,
             this.dag,
             file
-          ).visitQueryDefs(checker);
+          );
+          await fileVisitor.visitQueryDefs(checker);
         }
         isCold = false;
       } else {
@@ -104,23 +106,25 @@ export default class Analyzer {
             continue;
           }
           console.log("Affected: " + affectedFile.fileName);
-          new FileVisitor(
+          const fileVisitor = new FileVisitor(
             this.options,
             this.schemaCache,
             this.dag,
             affectedFile
-          ).visitAll(checker);
+          );
+          await fileVisitor.visitAll(checker);
           const children = this.dag.getDependents(affectedFile.fileName);
           for (const child of children) {
             const childFile = program.getSourceFile(child);
             // schemas can't rely on schemas so this should be fine.
             // well.. they could if you allow select statements in schemas that select from attached databases 🤣
-            new FileVisitor(
+            const fileVisitor = new FileVisitor(
               this.options,
               this.schemaCache,
               this.dag,
               childFile!
-            ).visitAll(checker);
+            );
+            await fileVisitor.visitAll(checker);
           }
           // no consult the dag for anyone who depends on this file and analyze them too.
           // we can use `program.getSourceFile` or whatever to do this.

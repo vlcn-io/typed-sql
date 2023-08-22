@@ -8,5 +8,5 @@ CREATE TABLE task (
   what TEXT NOT NULL,
   owner_id INTEGER NOT NULL,
   list_id INTEGER
-)
+);
 `;

@@ -32,8 +32,55 @@ import DependencyGraph from "../DependencyGraph.js";
 import QueryTypeBuilder from "./QueryTypeBuilder.js";
 import { CompanionFileFix, Fix } from "./types.js";
 import { normalize, replaceRange } from "../util.js";
-import fs from "fs";
+import fs from "fs/promises";
+import path from "path";
 import { Options } from "../Analyzer.js";
+import * as prettier from "prettier";
+
+const prettierOptionsPromise = prettier.resolveConfig(process.cwd());
+
+async function format(filePath: string, contents: string): Promise<string> {
+  const prettierOptions = (await prettierOptionsPromise) ?? {};
+  const isSqlFile = path.extname(filePath) === ".sql";
+  // detect if prettier is configured to handle SQL files
+  const hasPrettierSqlPlugin = Boolean(
+    prettierOptions.plugins?.find((plugin) => {
+      if (typeof plugin === "string") {
+        if (plugin.includes("sql")) {
+          return true;
+        }
+      }
+      if (typeof plugin === "object") {
+        if (
+          plugin.languages?.find((language) =>
+            language.name.toLowerCase().includes("sql")
+          )
+        ) {
+          return true;
+        }
+      }
+    })
+  );
+
+  // return original contents if prettier does not support it
+  if (isSqlFile && !hasPrettierSqlPlugin) {
+    return contents;
+  }
+  // else, return the formatted file
+  const formatOptions = {
+    ...prettierOptions,
+    filepath: filePath,
+  };
+  const formattedText = await prettier.format(contents, formatOptions);
+  return formattedText;
+}
+
+async function fileExists(filePath: string): Promise<Boolean> {
+  return fs
+    .access(filePath, fs.constants.F_OK)
+    .then(() => true)
+    .catch(() => false);
+}
 
 /**
  * The file visitor is ephemeral. Created each time we visit a file.
@@ -49,7 +96,7 @@ export default class FileVisitor {
     private sourceFile: ts.SourceFile
   ) {}
 
-  visitAll(checker: ts.TypeChecker) {
+  async visitAll(checker: ts.TypeChecker) {
     this.dag.orphan(this.sourceFile.fileName);
 
     this.collectAllNodes(this.sourceFile, checker);
@@ -67,10 +114,10 @@ export default class FileVisitor {
       this.sourceFile
     ).buildQueryTypes(this.sqlTemplates, checker);
 
-    this.applyFixes(schemaFixes.concat(queryFixes));
+    await this.applyFixes(schemaFixes.concat(queryFixes));
   }
 
-  visitSchemaDefs(checker: ts.TypeChecker) {
+  async visitSchemaDefs(checker: ts.TypeChecker) {
     this.collectSchemaNodes(this.sourceFile, checker);
     const schemaFixes = new SchemaTypeBuilder(
       this.options,
@@ -78,10 +125,10 @@ export default class FileVisitor {
       this.sourceFile
     ).buildResidentTypes(this.schemaTemplates);
 
-    this.applyFixes(schemaFixes);
+    await this.applyFixes(schemaFixes);
   }
 
-  visitQueryDefs(checker: ts.TypeChecker) {
+  async visitQueryDefs(checker: ts.TypeChecker) {
     this.collectQueryNodes(this.sourceFile, checker);
     const queryFixes = new QueryTypeBuilder(
       this.schemaCache,
@@ -89,10 +136,10 @@ export default class FileVisitor {
       this.sourceFile
     ).buildQueryTypes(this.sqlTemplates, checker);
 
-    this.applyFixes(queryFixes);
+    await this.applyFixes(queryFixes);
   }
 
-  applyFixes(fixes: Fix[]) {
+  async applyFixes(fixes: Fix[]) {
     if (fixes.length == 0) {
       return;
     }
@@ -113,22 +160,27 @@ export default class FileVisitor {
           // if replacement is _longer_ than what was replaced then all other replacements shift further away
           // if replacement is _shorter_ then they shift closer
           offset += replacement.length - (range[1] - range[0]);
-          fs.writeFileSync(this.sourceFile.fileName, updatedText);
+          const formattedText = await format(
+            this.sourceFile.fileName,
+            updatedText
+          );
+          await fs.writeFile(this.sourceFile.fileName, formattedText);
           break;
         }
         case "CompanionFileFix": {
           // write the companion file
-          this.#writeCompanionFile(fix);
+          await this.#writeCompanionFile(fix);
+          break;
         }
       }
     }
   }
 
   // only write it if it differs from what is on disk after normalization
-  #writeCompanionFile(fix: CompanionFileFix) {
+  async #writeCompanionFile(fix: CompanionFileFix) {
     let prefix = fix.placeAfter ?? "";
-    if (fs.existsSync(fix.path)) {
-      let existing = fs.readFileSync(fix.path, "utf-8");
+    if (await fileExists(fix.path)) {
+      let existing = await fs.readFile(fix.path, "utf-8");
       let placeAfterEnd = 0;
       if (fix.placeAfter != null) {
         const placeAfterStart = existing.indexOf(fix.placeAfter);
@@ -143,7 +195,8 @@ export default class FileVisitor {
         return;
       }
     }
-    fs.writeFileSync(fix.path, prefix + fix.content);
+    const formattedText = await format(fix.path, prefix + fix.content);
+    await fs.writeFile(fix.path, formattedText);
   }
 
   collectAllNodes(node: ts.Node, checker: ts.TypeChecker) {
