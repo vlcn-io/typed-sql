@@ -32,7 +32,10 @@ import DependencyGraph from "../DependencyGraph.js";
 import QueryTypeBuilder from "./QueryTypeBuilder.js";
 import { Fix } from "./types.js";
 import { replaceRange } from "../util.js";
-import fs from "fs";
+import fs from "fs/promises";
+import * as prettier from "prettier";
+
+const prettierOptions = prettier.resolveConfig(process.cwd());
 
 /**
  * The file visitor is ephemeral. Created each time we visit a file.
@@ -47,7 +50,7 @@ export default class FileVisitor {
     private sourceFile: ts.SourceFile
   ) {}
 
-  visitAll(checker: ts.TypeChecker) {
+  async visitAll(checker: ts.TypeChecker) {
     this.dag.orphan(this.sourceFile.fileName);
 
     this.collectAllNodes(this.sourceFile, checker);
@@ -64,20 +67,20 @@ export default class FileVisitor {
       this.sourceFile
     ).buildQueryTypes(this.sqlTemplates, checker);
 
-    this.applyFixes(schemaFixes.concat(queryFixes));
+    await this.applyFixes(schemaFixes.concat(queryFixes));
   }
 
-  visitSchemaDefs(checker: ts.TypeChecker) {
+  async visitSchemaDefs(checker: ts.TypeChecker) {
     this.collectSchemaNodes(this.sourceFile, checker);
     const schemaFixes = new SchemaTypeBuilder(
       this.schemaCache,
       this.sourceFile
     ).buildResidentTypes(this.schemaTemplates);
 
-    this.applyFixes(schemaFixes);
+    await this.applyFixes(schemaFixes);
   }
 
-  visitQueryDefs(checker: ts.TypeChecker) {
+  async visitQueryDefs(checker: ts.TypeChecker) {
     this.collectQueryNodes(this.sourceFile, checker);
     const queryFixes = new QueryTypeBuilder(
       this.schemaCache,
@@ -85,10 +88,10 @@ export default class FileVisitor {
       this.sourceFile
     ).buildQueryTypes(this.sqlTemplates, checker);
 
-    this.applyFixes(queryFixes);
+    await this.applyFixes(queryFixes);
   }
 
-  applyFixes(fixes: Fix[]) {
+  async applyFixes(fixes: Fix[]) {
     if (fixes.length == 0) {
       return;
     }
@@ -100,7 +103,14 @@ export default class FileVisitor {
       // if replacement is _longer_ than what was replaced then all other replacements shift further away
       // if replacement is _shorter_ then they shift closer
       offset += replacement.length - (range[1] - range[0]);
-      fs.writeFileSync(this.sourceFile.fileName, updatedText);
+
+      // format with prettier
+      const formatOptions = {
+        ...((await prettierOptions) || {}),
+        filepath: this.sourceFile.fileName,
+      };
+      const formattedText = await prettier.format(updatedText, formatOptions);
+      await fs.writeFile(this.sourceFile.fileName, formattedText);
     }
   }
 

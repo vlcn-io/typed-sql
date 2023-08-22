@@ -17,9 +17,6 @@ importers:
       '@typescript-eslint/parser':
         specifier: ^5.61.0
         version: 5.61.0(eslint@8.44.0)(typescript@5.1.6)
-      '@vlcn.io/eslint-plugin-typed-sql':
-        specifier: workspace:*
-        version: link:packages/eslint-plugin
       eslint:
         specifier: ^8.44.0
         version: 8.44.0
@@ -47,35 +44,13 @@ importers:
       expect:
         specifier: ^29.6.1
         version: 29.6.1
+      prettier:
+        specifier: ^3.0.2
+        version: 3.0.2
       typescript:
         specifier: ^5.1.6
         version: 5.1.6
     devDependencies:
-      '@types/node':
-        specifier: ^20.4.0
-        version: 20.4.0
-
-  packages/eslint-plugin:
-    dependencies:
-      '@typescript-eslint/utils':
-        specifier: ^5.61.0
-        version: 5.61.0(eslint@8.44.0)(typescript@5.1.6)
-      '@vlcn.io/type-gen-ts-adapter':
-        specifier: workspace:*
-        version: link:../type-gen-ts-adapter
-      eslint:
-        specifier: ^8.44.0
-        version: 8.44.0
-      expect:
-        specifier: ^29.6.1
-        version: 29.6.1
-      typescript:
-        specifier: ^5.1.6
-        version: 5.1.6
-    devDependencies:
-      '@types/eslint':
-        specifier: ^8.40.2
-        version: 8.40.2
       '@types/node':
         specifier: ^20.4.0
         version: 20.4.0
@@ -122,9 +97,6 @@ importers:
       '@typescript-eslint/parser':
         specifier: ^5.61.0
         version: 5.61.0(eslint@8.44.0)(typescript@5.1.6)
-      '@vlcn.io/eslint-plugin-typed-sql':
-        specifier: workspace:*
-        version: link:../packages/eslint-plugin
       '@vlcn.io/typed-sql-cli':
         specifier: workspace:*
         version: link:../packages/cli
@@ -691,17 +663,6 @@ packages:
 
   /@types/chai@4.3.5:
     resolution: {integrity: sha512-mEo1sAde+UCE6b2hxn332f1g1E8WfYRu6p5SvTKr2ZKC1f7gFJXk4h5PyGP9Dt6gCaG8y8XhwnXWC6Iy2cmBng==}
-    dev: true
-
-  /@types/eslint@8.40.2:
-    resolution: {integrity: sha512-PRVjQ4Eh9z9pmmtaq8nTjZjQwKFk7YIHIud3lRoKRBgUQjgjRmoGxxGEPXQkF+lH7QkHJRNr5F4aBgYCW0lqpQ==}
-    dependencies:
-      '@types/estree': 1.0.1
-      '@types/json-schema': 7.0.12
-    dev: true
-
-  /@types/estree@1.0.1:
-    resolution: {integrity: sha512-LG4opVs2ANWZ1TJoKc937iMmNstM/d0ae1vNbnBvBhqCSezgVUOzcLCqbI5elV8Vy6WKwKjaqR+zO9VKirBBCA==}
     dev: true
 
   /@types/is-ci@3.0.0:
@@ -2583,6 +2544,12 @@ packages:
   /prettier@2.8.8:
     resolution: {integrity: sha512-tdN8qQGvNjw4CHbY+XXk0JgCXn9QiF21a55rBe5LJAU+kDyC4WQn4+awm2Xfk2lQMk5fKup9XgzTZtGkjBdP9Q==}
     engines: {node: '>=10.13.0'}
+    hasBin: true
+    dev: false
+
+  /prettier@3.0.2:
+    resolution: {integrity: sha512-o2YR9qtniXvwEZlOKbveKfDQVyqxbEIWn48Z8m3ZJjBjcCmUy3xZGIv+7AkaeuaTr6yPXJjwv07ZWlsWbEy1rQ==}
+    engines: {node: '>=14'}
     hasBin: true
     dev: false
 
