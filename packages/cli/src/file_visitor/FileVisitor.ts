@@ -35,9 +35,18 @@ import { normalize, replaceRange } from "../util.js";
 import fs from "fs/promises";
 import path from "path";
 import { Options } from "../Analyzer.js";
-import * as prettier from "prettier";
 
-const prettierOptionsPromise = prettier.resolveConfig(process.cwd());
+const prettierOptionsPromise = import("prettier")
+  .then((mod) => {
+    const prettier = mod.default;
+    return prettier.resolveConfig(process.cwd());
+  })
+  .catch(() => {
+    console.log(
+      "Prettier not found. Will not format generated code with prettier."
+    );
+    return null;
+  });
 
 async function format(filePath: string, contents: string): Promise<string> {
   const prettierOptions = (await prettierOptionsPromise) ?? {};

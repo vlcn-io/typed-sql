@@ -25,5 +25,10 @@
   },
   "peerDependencies": {
     "prettier": "^3.0.1"
+  },
+  "peerDependenciesMeta": {
+    "prettier": {
+      "optional": true
+    }
   }
 }
