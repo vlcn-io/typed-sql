@@ -36,20 +36,41 @@ import fs from "fs/promises";
 import path from "path";
 import { Options } from "../Analyzer.js";
 
+// if the prettier dependency is missing, we use this to stub it.
+const prettierAndOptionsStub = [
+  {
+    format(x: string, opts?: any) {
+      return x;
+    },
+  },
+  {
+    plugins: [],
+  },
+] satisfies [
+  {
+    format: (x: string, opts?: any) => string;
+  },
+  {
+    plugins: string[];
+  },
+];
+
 const prettierOptionsPromise = import("prettier")
   .then((mod) => {
     const prettier = mod.default;
-    return prettier.resolveConfig(process.cwd());
+    return prettier.resolveConfig(process.cwd()).then((opts) => {
+      return [prettier, opts ?? {}] as const;
+    });
   })
   .catch(() => {
     console.log(
-      "Prettier not found. Will not format generated code with prettier."
+      "Prettier not found (this is ok). Will not format generated code with prettier."
     );
-    return null;
+    return prettierAndOptionsStub;
   });
 
 async function format(filePath: string, contents: string): Promise<string> {
-  const prettierOptions = (await prettierOptionsPromise) ?? {};
+  const [prettier, prettierOptions] = await prettierOptionsPromise;
   const isSqlFile = path.extname(filePath) === ".sql";
   // detect if prettier is configured to handle SQL files
   const hasPrettierSqlPlugin = Boolean(
