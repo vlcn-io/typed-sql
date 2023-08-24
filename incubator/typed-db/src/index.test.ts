@@ -1,5 +1,7 @@
 import { it, expect, vi } from "vitest";
+import { setFlagsFromString } from "v8";
 import { createSQL } from "./index.js";
+import { runInNewContext } from "vm";
 
 const exec = vi.fn(() => [{ a: "42" }]);
 const prepare = vi.fn(() => exec);
@@ -130,4 +132,53 @@ it("queues prepared statements", async () => {
   const query2 = sql`SELECT * FROM a`;
   await Promise.all([query1, query2]);
   expect(conflict).not.toHaveBeenCalled();
+});
+
+it("evicts from statement cache", async () => {
+  const CACHE_LIMIT = 10;
+
+  // An isolated instance to run alongside other tests
+  const prepare = vi.fn(() => exec);
+  const sql = createSQL<{ a: { a: string } }>(``, prepare);
+
+  // We have to put it in a function to ensure that
+  //   the `statement` variable is garbage collected
+  const fill = (i: number) => {
+    const statement = sql(["SELECT " + i]);
+    // Simulate 3 uses
+    statement.prepare();
+    statement.prepare();
+    statement.prepare();
+  };
+
+  {
+    sql`SELECT 42`.prepare(); // Oldest unused statement
+    await new Promise((r) => setTimeout(r, 10));
+    sql`SELECT 43`.prepare(); // Unused statement
+    expect(prepare).toHaveBeenCalledTimes(2);
+  }
+  // Force cache to fill up
+  for (let i = 0; i < CACHE_LIMIT - 1; i++) fill(i);
+  expect(prepare).toHaveBeenCalledTimes(11);
+
+  // They should be still in cache, before GC
+  {
+    sql`SELECT 42`.prepare();
+    await new Promise((r) => setTimeout(r, 10));
+    sql`SELECT 43`.prepare();
+    expect(prepare).toHaveBeenCalledTimes(11);
+  }
+
+  // Force garbage collection
+  setFlagsFromString("--expose_gc");
+  const gc = runInNewContext("gc");
+  gc();
+  await new Promise((r) => setTimeout(r, 10));
+
+  for (let i = 0; i < CACHE_LIMIT - 1; i++) fill(i); // All these should be in cache
+  expect(prepare).toHaveBeenCalledTimes(11);
+  sql`SELECT 43`.prepare(); // This should be in cache
+  expect(prepare).toHaveBeenCalledTimes(11);
+  sql`SELECT 42`.prepare(); // This should have been evicted
+  expect(prepare).toHaveBeenCalledTimes(12);
 });
