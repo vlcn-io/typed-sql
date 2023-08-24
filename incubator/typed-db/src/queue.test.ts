@@ -27,3 +27,13 @@ it("supports sync & async execution", async () => {
   expect(q(asyncFunction)).resolves.toBe(42);
   expect(asyncFunction).toHaveBeenCalled();
 });
+
+it("handles executions", () => {
+  const q = queue({ val: 0 });
+  const add = (n: number) => (resource: { val: number }) => (resource.val += n);
+  const reject = () => Promise.reject("failed");
+
+  expect(q(reject)).rejects.toBe("failed");
+  expect(q(add(2))).resolves.toBe(2);
+  expect(q(add(3))).resolves.toBe(5);
+});
