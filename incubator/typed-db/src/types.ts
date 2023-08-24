@@ -54,6 +54,8 @@ export type AsyncRunner = (
 export type SyncRunner = (sql: string) => (params: any[]) => unknown[];
 export type CachedRunner = Queued<ReturnType<AsyncRunner | SyncRunner>>;
 
+export type CacheStats = { refs: number; uses: number; time: number };
+
 export type Coercer<T, U> =
   | ((x: T) => U)
   | { create: (x: T) => U }
