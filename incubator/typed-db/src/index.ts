@@ -3,6 +3,7 @@ import type {
   AsyncRunner,
   SQLTemplate,
   SyncRunner,
+  CacheStats,
   ResultOf,
   SchemaOf,
   Coercer,
@@ -11,6 +12,9 @@ import type {
 } from "./types.js";
 import { isPromise, queue } from "./queue.js";
 import { schema } from "./types.js";
+
+/** Maximum number of cached prepared statements without references */
+const CACHE_LIMIT = 10;
 
 // TODO: update to take in the result of the `schema` tag
 // Usage would look like:
@@ -32,6 +36,31 @@ function createSQL<TSchema extends Schema>(
   prepare?: AsyncRunner | SyncRunner
 ) {
   const cache = new Map<string, CachedRunner>();
+  const stats = new Map<string, CacheStats>();
+  const registry = new FinalizationRegistry<string>((sql) => {
+    if (!stats.has(sql)) return;
+    if ((stats.get(sql)!.refs -= 1)) return;
+
+    let candidateStat = { time: Infinity, uses: Infinity };
+    let candidateKey = "";
+    let hanging = 0;
+    stats.forEach((stat, key) => {
+      if (stat.refs) return;
+      hanging += 1;
+      if (
+        stat.uses < candidateStat.uses ||
+        (stat.uses === candidateStat.uses && stat.time < candidateStat.time)
+      ) {
+        candidateStat = stat;
+        candidateKey = key;
+      }
+    });
+
+    if (hanging > CACHE_LIMIT) {
+      stats.delete(candidateKey);
+      cache.delete(candidateKey);
+    }
+  });
 
   const queries = definition
     .split(";") // TODO: handle nested ';' (e.g. for triggers)
@@ -86,6 +115,12 @@ function createSQL<TSchema extends Schema>(
       [schema]: null as any as TSchema,
     };
 
+    registry.register(compiled, sql);
+    if (!stats.has(sql)) stats.set(sql, { refs: 0, uses: 0, time: 0 });
+    const stat = stats.get(sql)!;
+    stat.time = Date.now();
+    stat.refs += 1;
+
     if (!prepare) return compiled;
     return Object.assign(compiled, {
       then(
@@ -113,11 +148,12 @@ function createSQL<TSchema extends Schema>(
         return template.bind({ coercer })(strings, ...values) as any;
       },
       prepare() {
+        stat.uses += 1;
+        stat.time = Date.now();
         if (cache.has(sql)) return;
         const prepared = queue(prepare(sql));
         cache.set(sql, prepared);
         if (isPromise(prepared)) return prepared.then(() => undefined);
-        // TODO: evict statements from cache based on some heuristic
       },
     });
   }
