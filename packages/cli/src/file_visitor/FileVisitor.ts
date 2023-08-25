@@ -175,26 +175,21 @@ export default class FileVisitor {
     }
     let offset = 0;
     console.log("Applying fix to " + this.sourceFile.fileName);
+    let text = this.sourceFile.getFullText();
     for (const fix of fixes) {
       switch (fix._tag) {
         case "InlineFix": {
           const { range, replacement } = fix;
-          const text = this.sourceFile.getFullText();
-          const updatedText = replaceRange(
+          text = replaceRange(
             text,
-            range[0],
-            range[1],
+            offset + range[0],
+            offset + range[1],
             replacement
           );
 
           // if replacement is _longer_ than what was replaced then all other replacements shift further away
           // if replacement is _shorter_ then they shift closer
           offset += replacement.length - (range[1] - range[0]);
-          const formattedText = await format(
-            this.sourceFile.fileName,
-            updatedText
-          );
-          await fs.writeFile(this.sourceFile.fileName, formattedText);
           break;
         }
         case "CompanionFileFix": {
@@ -203,6 +198,12 @@ export default class FileVisitor {
           break;
         }
       }
+    }
+
+    // if we had inline fixes, write them in batch
+    if (offset != 0) {
+      const formattedText = await format(this.sourceFile.fileName, text);
+      await fs.writeFile(this.sourceFile.fileName, formattedText);
     }
   }
 
