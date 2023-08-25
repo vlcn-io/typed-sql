@@ -1,6 +1,7 @@
 import {
   parseDdlRelations,
   getDdlRelations,
+  NamedRelation,
 } from "@vlcn.io/type-gen-ts-adapter";
 import { getChildren, normalize, trimTag } from "../util.js";
 import ts from "typescript";
@@ -25,12 +26,11 @@ export default class SchemaTypeBuilder {
    * Will reun the replace against the file.
    */
   buildResidentTypes(schemaDefinitions: ts.TaggedTemplateExpression[]) {
-    this.schemaCache.clearForFile(this.sourceFile.fileName);
     const fixes = [];
 
     // process templates
     for (const def of schemaDefinitions) {
-      const fix = this.processDeclareSchemaTemplate(this.sourceFile, def);
+      const fix = this.processDeclareSchemaTemplate(def);
       for (const f of fix) {
         fixes.push(f);
       }
@@ -39,18 +39,24 @@ export default class SchemaTypeBuilder {
     return fixes;
   }
 
+  static typePath(file: ts.SourceFile) {
+    return file.fileName.replace(/\.ts$/, "Type.ts");
+  }
+
   private processDeclareSchemaTemplate(
-    file: ts.SourceFile,
     node: ts.TaggedTemplateExpression
   ): Fix[] {
+    const file = this.sourceFile;
     const children = getChildren(node);
     const templateStringNode = children[children.length - 1];
     const maybeExistingNode = children[1];
     const schemaAccessNode = children[0];
+    const toCache: [string, string, NamedRelation[]][] = [];
     const range: [number, number] = [
       schemaAccessNode.getEnd(),
       templateStringNode.getStart(),
     ];
+    console.log("process declare template");
     if (ts.isTemplateLiteral(templateStringNode)) {
       let existingGeneric = "";
       if (maybeExistingNode != templateStringNode) {
@@ -65,11 +71,11 @@ export default class SchemaTypeBuilder {
 
         const ret: Fix[] = [];
         if (this.options.schemaTyping === "inline") {
-          this.schemaCache.cache(
+          toCache.push([
             file.fileName,
             normalizedUntaggedReplacement,
-            schemaRelations
-          );
+            schemaRelations,
+          ]);
           const normalizedReplacement = `<${normalizedUntaggedReplacement}>`;
           if (existingGeneric == normalizedReplacement) {
             return [];
@@ -81,12 +87,12 @@ export default class SchemaTypeBuilder {
             replacement: `<${untaggedReplacement}>`,
           });
         } else {
-          const typepath = file.fileName.replace(/\.ts$/, "Type.ts");
-          this.schemaCache.cache(
+          const typepath = SchemaTypeBuilder.typePath(file);
+          toCache.push([
             typepath,
             normalizedUntaggedReplacement,
-            schemaRelations
-          );
+            schemaRelations,
+          ]);
           const basename = path.basename(file.fileName, ".ts");
           const typename = basename + "Type";
           ret.push({
@@ -119,6 +125,16 @@ export default class SchemaTypeBuilder {
             path: file.fileName.replace(/\.ts$/, ".sql"),
             content: rawSchemaText,
           });
+        }
+
+        if (toCache.length > 0) {
+          this.schemaCache.clearForFile(this.sourceFile.fileName);
+          this.schemaCache.clearForFile(
+            SchemaTypeBuilder.typePath(this.sourceFile)
+          );
+          for (const [path, replacement, relations] of toCache) {
+            this.schemaCache.cache(path, replacement, relations);
+          }
         }
         return ret;
       } catch (e: any) {
