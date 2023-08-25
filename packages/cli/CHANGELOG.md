@@ -1,5 +1,13 @@
 # @vlcn.io/typed-sql-cli
 
+## 0.2.9
+
+### Patch Changes
+
+- apply source file patches in bulk, fix edge case where types would not generate
+- Updated dependencies
+  - @vlcn.io/type-gen-ts-adapter@0.2.9
+
 ## 0.2.8
 
 ### Patch Changes

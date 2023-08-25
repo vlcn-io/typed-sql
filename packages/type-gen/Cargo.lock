@@ -228,7 +228,7 @@ dependencies = [
 
 [[package]]
 name = "typed-sql-type-gen"
-version = "0.1.0"
+version = "0.1.3"
 dependencies = [
  "fallible-iterator",
  "serde",

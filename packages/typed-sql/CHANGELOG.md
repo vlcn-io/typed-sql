@@ -1,5 +1,11 @@
 # @vlcn.io/typed-sql
 
+## 0.2.9
+
+### Patch Changes
+
+- apply source file patches in bulk, fix edge case where types would not generate
+
 ## 0.2.8
 
 ### Patch Changes
