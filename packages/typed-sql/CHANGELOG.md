@@ -1,5 +1,39 @@
 # @vlcn.io/typed-sql
 
+## 0.2.13
+
+### Patch Changes
+
+- deploy correct build
+
+## 0.2.12
+
+### Patch Changes
+
+- 08f13fb: react strict mode fiex, migrator fixes, typed-sql basic support, ws replication, db provider hooks
+- 6deb949: update react hooks to accept typed-sql typings
+
+## 0.2.11
+
+### Patch Changes
+
+- fix incorrect build being deployed in last version
+- 08f13fb: react strict mode fiex, migrator fixes, typed-sql basic support, ws replication, db provider hooks
+- 6deb949: update react hooks to accept typed-sql typings
+
+## 0.2.11-next.0
+
+### Patch Changes
+
+- fix incorrect build being deployed in last version
+
+## 0.2.10
+
+### Patch Changes
+
+- 08f13fb: react strict mode fiex, migrator fixes, typed-sql basic support, ws replication, db provider hooks
+- 6deb949: update react hooks to accept typed-sql typings
+
 ## 0.2.9
 
 ### Patch Changes

@@ -1,5 +1,47 @@
 # @vlcn.io/typed-sql-cli
 
+## 0.2.13
+
+### Patch Changes
+
+- deploy correct build
+- Updated dependencies
+  - @vlcn.io/type-gen-ts-adapter@0.2.13
+
+## 0.2.12
+
+### Patch Changes
+
+- 08f13fb: react strict mode fiex, migrator fixes, typed-sql basic support, ws replication, db provider hooks
+- Updated dependencies [08f13fb]
+  - @vlcn.io/type-gen-ts-adapter@0.2.12
+
+## 0.2.11
+
+### Patch Changes
+
+- fix incorrect build being deployed in last version
+- 08f13fb: react strict mode fiex, migrator fixes, typed-sql basic support, ws replication, db provider hooks
+- Updated dependencies
+- Updated dependencies [08f13fb]
+  - @vlcn.io/type-gen-ts-adapter@0.2.11
+
+## 0.2.11-next.0
+
+### Patch Changes
+
+- fix incorrect build being deployed in last version
+- Updated dependencies
+  - @vlcn.io/type-gen-ts-adapter@0.2.11-next.0
+
+## 0.2.10
+
+### Patch Changes
+
+- 08f13fb: react strict mode fiex, migrator fixes, typed-sql basic support, ws replication, db provider hooks
+- Updated dependencies [08f13fb]
+  - @vlcn.io/type-gen-ts-adapter@0.2.10
+
 ## 0.2.9
 
 ### Patch Changes
