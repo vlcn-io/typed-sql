@@ -4,7 +4,11 @@ Generates types for your SQL.
 
 https://github.com/vlcn-io/typed-sql/assets/1009003/4459edb2-4a52-4641-819d-5805c04d943a
 
-ALPHA release. In theory this covers all of SQLite. In practice, I have written very few tests yet so likely there are many bugs.
+**Beta status. My main focuses are:**
+1. [cr-sqlite](https://github.com/vlcn-io/cr-sqlite)
+2. [materialite](https://github.com/vlcn-io/materialite/)
+
+And this project when there's time.
 
 Documented issues: https://github.com/vlcn-io/typed-sql/issues
 
