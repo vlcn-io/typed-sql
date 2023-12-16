@@ -1,6 +1,6 @@
 {
   "name": "@vlcn.io/typed-sql-cli",
-  "version": "0.3.0-next.2",
+  "version": "0.3.0",
   "description": "",
   "main": "dist/index.js",
   "bin": {
