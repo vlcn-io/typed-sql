@@ -1,5 +1,32 @@
 # @vlcn.io/type-gen-ts-adapter
 
+## 0.3.0-next.2
+
+### Patch Changes
+
+- fix error where separate connections would not report the correct db version
+- Updated dependencies
+  - typed-sql-type-gen@0.1.4-next.0
+
+## 0.3.0-next.1
+
+### Patch Changes
+
+- prepare `tables_used` query, correctly unzip native library from pre-builds
+- Updated dependencies
+  - typed-sql-type-gen@0.1.4-next.0
+
+## 0.3.0-next.0
+
+### Minor Changes
+
+- v0.16.0-next
+
+### Patch Changes
+
+- Updated dependencies
+  - typed-sql-type-gen@0.2.0-next.0
+
 ## 0.2.13
 
 ### Patch Changes
