@@ -7,6 +7,8 @@
 //     : [U, ...Flatten<R>]
 //   : [];
 
+import { Queued } from "./queue.js";
+
 export const schema = Symbol();
 export const result = Symbol();
 
@@ -19,6 +21,7 @@ export type SQL<TSchema extends Schema, TResult, Async = true> = {
   ? {}
   : {
       as<T>(coercer: Coercer<TResult, T>): SQL<TSchema, T, Async>;
+      prepare(): Async extends true ? Promise<void> : void;
     } & (Async extends true ? PromiseLike<TResult[]> : SyncPromise<TResult[]>));
 
 export type SQLTemplate<TSchema extends Schema, Async = true> = {
@@ -44,6 +47,14 @@ export type SQLTemplate<TSchema extends Schema, Async = true> = {
       : Record<string, unknown>[] | unknown[][]
   ): SQL<TSchema, unknown, Async>;
 };
+
+export type AsyncRunner = (
+  sql: string
+) => Promise<(params: any[]) => Promise<unknown[]>>;
+export type SyncRunner = (sql: string) => (params: any[]) => unknown[];
+export type CachedRunner = Queued<ReturnType<AsyncRunner | SyncRunner>>;
+
+export type CacheStats = { refs: number; uses: number; time: number };
 
 export type Coercer<T, U> =
   | ((x: T) => U)

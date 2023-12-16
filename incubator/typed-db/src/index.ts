@@ -1,12 +1,20 @@
 import type {
+  CachedRunner,
+  AsyncRunner,
   SQLTemplate,
+  SyncRunner,
+  CacheStats,
   ResultOf,
   SchemaOf,
   Coercer,
   Schema,
   SQL,
 } from "./types.js";
+import { isPromise, queue } from "./queue.js";
 import { schema } from "./types.js";
+
+/** Maximum number of cached prepared statements without references */
+const CACHE_LIMIT = 10;
 
 // TODO: update to take in the result of the `schema` tag
 // Usage would look like:
@@ -16,17 +24,44 @@ function createSQL<TSchema extends Schema>(
 ): SQLTemplate<TSchema, never>;
 function createSQL<TSchema extends Schema>(
   definition: string,
-  run?: (sql: string, params: any[]) => Promise<unknown[]>
+  prepare?: AsyncRunner
 ): SQLTemplate<TSchema, true>;
 function createSQL<TSchema extends Schema>(
   definition: string,
-  run?: (sql: string, params: any[]) => unknown[]
+  prepare?: SyncRunner
 ): SQLTemplate<TSchema, false>;
 
 function createSQL<TSchema extends Schema>(
   definition: string,
-  run?: (sql: string, params: any[]) => Promise<unknown[]> | unknown[]
+  prepare?: AsyncRunner | SyncRunner
 ) {
+  const cache = new Map<string, CachedRunner>();
+  const stats = new Map<string, CacheStats>();
+  const registry = new FinalizationRegistry<string>((sql) => {
+    if (!stats.has(sql)) return;
+    if ((stats.get(sql)!.refs -= 1)) return;
+
+    let candidateStat = { time: Infinity, uses: Infinity };
+    let candidateKey = "";
+    let hanging = 0;
+    stats.forEach((stat, key) => {
+      if (stat.refs) return;
+      hanging += 1;
+      if (
+        stat.uses < candidateStat.uses ||
+        (stat.uses === candidateStat.uses && stat.time < candidateStat.time)
+      ) {
+        candidateStat = stat;
+        candidateKey = key;
+      }
+    });
+
+    if (hanging > CACHE_LIMIT) {
+      stats.delete(candidateKey);
+      cache.delete(candidateKey);
+    }
+  });
+
   const queries = definition
     .split(";") // TODO: handle nested ';' (e.g. for triggers)
     .filter((x) => x.trim())
@@ -39,7 +74,7 @@ function createSQL<TSchema extends Schema>(
     values,
   });
 
-  if (!run) return sql;
+  if (!prepare) return sql;
   Object.assign(sql.schema, {
     then(resolve?: (_: unknown) => unknown, reject?: (_: unknown) => void) {
       const results = queries.map((x) => (x as any).then());
@@ -80,27 +115,45 @@ function createSQL<TSchema extends Schema>(
       [schema]: null as any as TSchema,
     };
 
-    if (!run) return compiled;
+    registry.register(compiled, sql);
+    if (!stats.has(sql)) stats.set(sql, { refs: 0, uses: 0, time: 0 });
+    const stat = stats.get(sql)!;
+    stat.time = Date.now();
+    stat.refs += 1;
+
+    if (!prepare) return compiled;
     return Object.assign(compiled, {
       then(
         resolve?: (_: unknown) => unknown,
         reject?: (_: unknown) => void
       ): any {
-        try {
-          const result = run?.(sql, params);
-          if (Array.isArray(result)) {
-            return resolve ? resolve(result.map(coerce)) : result.map(coerce);
+        this.prepare();
+        return cache.get(sql)!((execute) => {
+          if (isPromise(execute)) {
+            return execute
+              .then((x) => x(params))
+              .then((x) => x.map(coerce))
+              .then(resolve, reject);
           }
-          if (result && typeof result === "object" && "then" in result) {
-            return result.then((x) => x.map(coerce)).then(resolve, reject);
+          try {
+            const result = execute(params).map(coerce);
+            return resolve ? resolve(result) : result;
+          } catch (error) {
+            if (reject) return reject(error);
+            throw error;
           }
-        } catch (error) {
-          if (reject) return reject(error);
-          throw error;
-        }
+        });
       },
       as<T>(coercer: Coercer<unknown, T>) {
         return template.bind({ coercer })(strings, ...values) as any;
+      },
+      prepare() {
+        stat.uses += 1;
+        stat.time = Date.now();
+        if (cache.has(sql)) return;
+        const prepared = queue(prepare(sql));
+        cache.set(sql, prepared);
+        if (isPromise(prepared)) return prepared.then(() => undefined);
       },
     });
   }
